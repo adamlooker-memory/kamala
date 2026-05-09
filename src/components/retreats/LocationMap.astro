@@ -1,6 +1,7 @@
 ---
 /**
  * Small static MapLibre map centred on the retreat venue.
+ * Uses OpenFreeMap vector tiles (no API key, free).
  * If lat/lng are missing or zero, renders an attractive textual fallback.
  */
 interface Props {
@@ -30,7 +31,7 @@ const hasCoords = lat !== null && lng !== null && !(lat === 0 && lng === 0);
     </div>
     <div>
       {hasCoords ? (
-        <div class="relative w-full h-[380px] rounded-(--radius-card) overflow-hidden border border-sand/70">
+        <div class="relative w-full h-[380px] rounded-(--radius-card) overflow-hidden border border-sand/70 bg-cream-deep">
           <div data-location-map class="absolute inset-0" data-lat={lat} data-lng={lng}></div>
         </div>
       ) : (
@@ -42,43 +43,39 @@ const hasCoords = lat !== null && lng !== null && !(lat === 0 && lng === 0);
   </div>
 </section>
 
-{hasCoords && (
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" />
-)}
-
 <script>
+  import 'maplibre-gl/dist/maplibre-gl.css';
+
   const el = document.querySelector<HTMLElement>('[data-location-map]');
   if (el) {
     const lat = parseFloat(el.dataset.lat ?? '');
     const lng = parseFloat(el.dataset.lng ?? '');
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      import('maplibre-gl').then((mod) => {
-        const maplibregl: any = (mod as any).default;
-        const map = new maplibregl.Map({
-          container: el,
-          style: {
-            version: 8,
-            sources: {
-              osm: {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256,
-                attribution:
-                  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-              },
-            },
-            layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-          },
-          center: [lng, lat],
-          zoom: 9,
-          interactive: true,
-          attributionControl: { compact: true },
+      import('maplibre-gl')
+        .then((mod) => {
+          const maplibregl: any = (mod as any).default;
+          const map = new maplibregl.Map({
+            container: el,
+            style: 'https://tiles.openfreemap.org/styles/positron',
+            center: [lng, lat],
+            zoom: 9,
+            interactive: true,
+            attributionControl: { compact: true },
+          });
+          map.on('error', (e: any) => console.warn('[location-map]', e?.error || e));
+          const marker = document.createElement('div');
+          marker.style.cssText =
+            'width:24px;height:24px;border-radius:9999px;background:#b78f38;border:2px solid #f9f3f1;box-shadow:0 1px 4px rgba(42,38,34,0.3)';
+          new maplibregl.Marker({ element: marker }).setLngLat([lng, lat]).addTo(map);
+        })
+        .catch((err) => {
+          console.error('[location-map] failed to load maplibre-gl', err);
         });
-        const marker = document.createElement('div');
-        marker.style.cssText =
-          'width:24px;height:24px;border-radius:9999px;background:#b78f38;border:2px solid #f9f3f1;box-shadow:0 1px 4px rgba(42,38,34,0.3)';
-        new maplibregl.Marker({ element: marker }).setLngLat([lng, lat]).addTo(map);
-      });
     }
   }
 </script>
+
+<style>
+  :global(.maplibregl-canvas) { outline: none; }
+  :global(.maplibregl-ctrl-attrib) { font-size: 10px; }
+</style>

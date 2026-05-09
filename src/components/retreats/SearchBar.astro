@@ -62,37 +62,6 @@ const { suggestions } = Astro.props;
 
   <div class="hidden sm:block w-px self-stretch bg-sand/80"></div>
 
-  <!-- Dates -->
-  <div class="search-field flex items-center gap-3 px-5 py-2 rounded-(--radius-pill) hover:bg-cream transition-colors">
-    <div>
-      <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-from">
-        From
-      </label>
-      <input
-        id="search-from"
-        type="date"
-        name="from"
-        data-search-from
-        class="bg-transparent text-sm text-ink placeholder:text-mist focus:outline-none"
-      />
-    </div>
-    <span class="text-mist">→</span>
-    <div>
-      <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-to">
-        To
-      </label>
-      <input
-        id="search-to"
-        type="date"
-        name="to"
-        data-search-to
-        class="bg-transparent text-sm text-ink placeholder:text-mist focus:outline-none"
-      />
-    </div>
-  </div>
-
-  <div class="hidden sm:block w-px self-stretch bg-sand/80"></div>
-
   <!-- Guests -->
   <div class="search-field px-5 py-2 rounded-(--radius-pill) hover:bg-cream transition-colors">
     <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-guests">
@@ -157,8 +126,6 @@ const { suggestions } = Astro.props;
   });
 
   // --- Submit / change handlers -----------------------------------------
-  const fromInput = document.querySelector<HTMLInputElement>('[data-search-from]');
-  const toInput = document.querySelector<HTMLInputElement>('[data-search-to]');
   const guestsSelect = document.querySelector<HTMLSelectElement>('[data-search-guests]');
   const submitBtn = document.querySelector<HTMLButtonElement>('[data-search-submit]');
   const form = document.querySelector<HTMLFormElement>('[data-search-bar]');
@@ -166,8 +133,8 @@ const { suggestions } = Astro.props;
   function triggerSearch() {
     const detail = {
       location: locationInput?.value ?? '',
-      from: fromInput?.value ?? '',
-      to: toInput?.value ?? '',
+      from: '',
+      to: '',
       guests: guestsSelect?.value ?? '',
     };
     document.dispatchEvent(new CustomEvent('kamala:search', { detail }));
@@ -181,9 +148,7 @@ const { suggestions } = Astro.props;
     ev.preventDefault();
     triggerSearch();
   });
-  [fromInput, toInput, guestsSelect].forEach((el) => {
-    el?.addEventListener('change', triggerSearch);
-  });
+  guestsSelect?.addEventListener('change', triggerSearch);
 
   // Fire once on load so initial state is "all visible".
   document.addEventListener('DOMContentLoaded', triggerSearch);

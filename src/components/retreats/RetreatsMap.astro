@@ -1,71 +1,124 @@
 ---
 /**
- * MapLibre GL JS map of the UK with markers for each retreat.
- * - Lazy-imported client-side (saves bundle weight on initial paint).
- * - Tile source: OpenStreetMap raster tiles via the public CDN.
- *   Attribution rendered per OSM policy.
- *
- * Markers read from the same `data-retreat-card` islands the list view uses,
- * so the data is single-sourced.
+ * MapLibre GL map of the UK with markers for each retreat.
+ * - Lazy-imported on first show of the Map view (saves bundle weight).
+ * - Tile source: OpenFreeMap (free, no API key, vector tiles).
+ *   Falls back to a clear message if tiles or the library fail to load.
  */
 ---
 
 <div class="relative w-full h-[560px] rounded-(--radius-card) overflow-hidden border border-sand/70 bg-cream-deep">
   <div data-retreats-map class="absolute inset-0"></div>
-  <div class="absolute top-4 left-4 z-10 px-3 py-2 rounded-(--radius-card) bg-cream/90 text-xs text-ink-soft">
+  <div data-retreats-map-status class="absolute inset-x-0 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center pointer-events-none">
+    <div class="px-4 py-3 rounded-(--radius-card) bg-cream/90 text-xs text-ink-soft border border-sand/60 shadow-(--shadow-soft)">Loading map…</div>
+  </div>
+  <div class="absolute top-4 left-4 z-10 px-3 py-2 rounded-(--radius-card) bg-cream/90 text-xs text-ink-soft pointer-events-none">
     Click a marker to see the retreat
   </div>
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" />
-
 <script>
-  // Load the map once the user has scrolled the map view into view —
-  // we still render the container in both views, but only init the map
-  // when it has non-zero size (i.e. map view is active).
+  import 'maplibre-gl/dist/maplibre-gl.css';
+
   const container = document.querySelector<HTMLElement>('[data-retreats-map]');
+  const status = document.querySelector<HTMLElement>('[data-retreats-map-status]');
+
   let mapInstance: any = null;
+  let maplibreNs: any = null;
   let markers: Array<{ slug: string; marker: any }> = [];
+
+  function setStatus(text: string | null) {
+    if (!status) return;
+    if (text === null) {
+      status.style.display = 'none';
+      return;
+    }
+    status.style.display = '';
+    const inner = status.querySelector('div');
+    if (inner) inner.textContent = text;
+  }
+
+  async function waitForSize(el: HTMLElement, tries = 60): Promise<boolean> {
+    for (let i = 0; i < tries; i++) {
+      if (el.clientWidth > 0 && el.clientHeight > 0) return true;
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    return false;
+  }
 
   async function initMap() {
     if (mapInstance || !container) return;
-    if (container.clientWidth === 0 || container.clientHeight === 0) return;
 
-    const maplibregl: any = (await import('maplibre-gl')).default;
-    mapInstance = new maplibregl.Map({
-      container,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          },
-        },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-      },
-      center: [-2.5, 54.0],
-      zoom: 5,
-      attributionControl: { compact: true },
-    });
+    console.info('[map] initialising');
+    const sized = await waitForSize(container);
+    if (!sized) {
+      console.warn('[map] container has zero size after waitForSize');
+      setStatus('Map container has no size.');
+      return;
+    }
 
-    mapInstance.on('load', () => placeMarkers(maplibregl));
+    try {
+      maplibreNs = (await import('maplibre-gl')).default;
+      console.info('[map] maplibre-gl loaded');
+    } catch (err) {
+      console.error('[map] failed to load maplibre-gl', err);
+      setStatus('Could not load the map library.');
+      return;
+    }
+
+    let cleared = false;
+    const clearOverlay = (reason: string) => {
+      if (cleared) return;
+      cleared = true;
+      console.info('[map] overlay cleared:', reason);
+      setStatus(null);
+    };
+
+    // Safety net: if nothing fires within 10s, hide the overlay anyway so the user
+    // at least sees whatever the map *did* paint, rather than an indefinite spinner.
+    const safety = window.setTimeout(() => clearOverlay('safety timeout'), 10000);
+
+    try {
+      mapInstance = new maplibreNs.Map({
+        container,
+        style: 'https://tiles.openfreemap.org/styles/positron',
+        center: [-2.5, 54.0],
+        zoom: 5,
+        attributionControl: { compact: true },
+      });
+
+      // Several signals that "something is on screen". First one wins.
+      mapInstance.on('styledata', () => clearOverlay('styledata'));
+      mapInstance.on('load', () => {
+        clearOverlay('load');
+        placeMarkers();
+      });
+      mapInstance.on('idle', () => clearOverlay('idle'));
+
+      mapInstance.on('error', (e: any) => {
+        const msg = e?.error?.message ?? 'Unknown map error';
+        console.warn('[map] runtime error:', msg, e?.error || e);
+        // Don't tear down — tile-level errors are recoverable as the user pans.
+      });
+
+      mapInstance.once('remove', () => window.clearTimeout(safety));
+    } catch (err) {
+      window.clearTimeout(safety);
+      console.error('[map] failed to initialise', err);
+      setStatus('Map could not be displayed.');
+    }
   }
 
-  function placeMarkers(maplibregl: any) {
-    if (!mapInstance) return;
-    // Clear existing markers if re-running.
+  function placeMarkers() {
+    if (!mapInstance || !maplibreNs) return;
     markers.forEach((m) => m.marker.remove());
     markers = [];
 
     const cards = document.querySelectorAll<HTMLElement>('[data-retreat-card]');
-    const bounds = new maplibregl.LngLatBounds();
+    const bounds = new maplibreNs.LngLatBounds();
+    let placed = 0;
 
     cards.forEach((card) => {
-      // Skip cards filtered out by the search.
       if (card.dataset.filtered === 'true') return;
       const lat = parseFloat(card.dataset.lat ?? '');
       const lng = parseFloat(card.dataset.lng ?? '');
@@ -86,42 +139,38 @@
         card.classList.add('ring-2', 'ring-gold-500');
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibreNs.Marker({ element: el })
         .setLngLat([lng, lat])
         .addTo(mapInstance);
       markers.push({ slug, marker });
       bounds.extend([lng, lat]);
+      placed++;
     });
 
-    if (!bounds.isEmpty()) {
+    if (placed > 0 && !bounds.isEmpty()) {
       mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 8, duration: 0 });
     }
   }
 
-  // Trigger init when the map view becomes visible.
   document.addEventListener('kamala:view-changed', (ev: Event) => {
     const detail = (ev as CustomEvent).detail as { view: 'list' | 'map' };
-    if (detail.view === 'map') {
+    if (detail.view !== 'map') return;
+    if (!mapInstance) {
+      initMap();
+    } else {
       requestAnimationFrame(() => {
-        initMap();
-        if (mapInstance) {
-          mapInstance.resize();
-          // Re-place markers because filters may have changed.
-          import('maplibre-gl').then((m) => placeMarkers((m as any).default));
-        }
+        mapInstance.resize();
+        placeMarkers();
       });
     }
   });
 
-  // Re-place markers when search filter changes.
   document.addEventListener('kamala:filtered', () => {
-    if (!mapInstance) return;
-    import('maplibre-gl').then((m) => placeMarkers((m as any).default));
+    if (mapInstance) placeMarkers();
   });
 </script>
 
 <style>
-  :global(.maplibregl-canvas) {
-    outline: none;
-  }
+  :global(.maplibregl-canvas) { outline: none; }
+  :global(.maplibregl-ctrl-attrib) { font-size: 10px; }
 </style>
