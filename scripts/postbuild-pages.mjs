@@ -24,6 +24,7 @@ const DIST   = join(projectRoot, 'dist');
 const SERVER = join(DIST, 'server');
 const CLIENT = join(DIST, 'client');
 const WORKER = join(DIST, '_worker.js');
+const WRANGLER_DEPLOY = join(projectRoot, '.wrangler', 'deploy');
 
 async function exists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -55,7 +56,13 @@ if (await exists(CLIENT)) {
   await rm(CLIENT, { recursive: true, force: true });
 }
 
-// 5. _routes.json — let Pages serve static assets directly from CDN, send everything else to the worker.
+// 5. Remove Astro's deploy redirect — it points wrangler at dist/server/wrangler.json,
+//    which we just moved. Pages should read project-root wrangler.toml instead.
+if (await exists(WRANGLER_DEPLOY)) {
+  await rm(WRANGLER_DEPLOY, { recursive: true, force: true });
+}
+
+// 6. _routes.json — let Pages serve static assets directly from CDN, send everything else to the worker.
 const routes = {
   version: 1,
   include: ['/*'],
