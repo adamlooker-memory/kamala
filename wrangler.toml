@@ -8,6 +8,11 @@ name = "kamala"
 compatibility_date = "2026-05-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Tells Cloudflare Pages where the build output lives.
+# scripts/postbuild-pages.mjs reshapes Astro's `dist/server` + `dist/client`
+# into the layout Pages expects (`dist/_worker.js/` + static assets at root).
+pages_build_output_dir = "./dist"
+
 [vars]
 PUBLIC_SITE_URL     = "https://kamalaretreats.com"
 NOTIFICATIONS_EMAIL = "adam@trustedmarketing.co.uk"
