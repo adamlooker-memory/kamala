@@ -1,0 +1,211 @@
+---
+import { env } from 'cloudflare:workers';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Placeholder from '../../components/Placeholder.astro';
+import Itinerary from '../../components/retreats/Itinerary.astro';
+import RoomsPricing from '../../components/retreats/RoomsPricing.astro';
+import LocationMap from '../../components/retreats/LocationMap.astro';
+import WaitlistForm from '../../components/retreats/WaitlistForm.astro';
+import { getDb } from '../../db/client';
+import { getRetreatBySlug } from '../../lib/retreats-query';
+import { formatDateRange, formatPence, monthEyebrow } from '../../lib/format';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/retreats');
+
+if (!env?.DB) {
+  return new Response('Database unavailable', { status: 500 });
+}
+
+const db = getDb(env);
+const detail = await getRetreatBySlug(db, slug);
+if (!detail) {
+  return new Response('Not found', { status: 404 });
+}
+
+const { retreat, location, room_types, add_ons, practitioners } = detail;
+
+const dateLabel = formatDateRange(retreat.starts_at, retreat.ends_at);
+const eyebrow = monthEyebrow(retreat.starts_at);
+const totalRemaining = room_types.reduce((s, r) => s + r.remaining, 0);
+const isSoldOut = retreat.is_sold_out || totalRemaining === 0;
+
+const cheapest = room_types.reduce<number | null>((min, rt) => {
+  const c = Math.min(rt.price_pair_pence, rt.price_solo_pence);
+  return min === null || c < min ? c : min;
+}, null);
+
+// TODO: pull this from a `retreats.summary` column once it lands. For v1 we
+// derive a lead from `description` (markdown ok) by trimming to first paragraph.
+const overviewLead =
+  retreat.description?.split(/\n{2,}/)[0]?.trim() ??
+  'A weekend of rituals, somatic release, breathwork and sound. Held with intention.';
+
+const included = [
+  'All meals — dairy free, gluten free, nut free, vegan options available',
+  'Drinks station throughout: matcha, lions mane coffee, juices, herbal teas',
+  'Full programme of rituals, breathwork, gong, sound healing & yoga',
+  'Pool, sauna, steam room and spa complex (Sunday)',
+  'Take-home journal, KAMALA Reishi set, and a pressed juice for the journey',
+  'No alcohol — by design',
+];
+---
+
+<BaseLayout
+  title={retreat.name}
+  description={retreat.tagline ?? `Kamala Retreats · ${dateLabel} · ${location.name}`}
+>
+  <!-- Hero -->
+  <section class="pt-10 lg:pt-16 pb-12 lg:pb-20">
+    <div class="grid lg:grid-cols-12 gap-10 items-end">
+      <div class="lg:col-span-7 space-y-6">
+        <p class="eyebrow">{eyebrow}</p>
+        <h1 class="font-light">{retreat.name}</h1>
+        {retreat.tagline && (
+          <p class="text-xl text-ink-soft leading-relaxed max-w-2xl">{retreat.tagline}</p>
+        )}
+        <dl class="flex flex-wrap gap-x-8 gap-y-3 text-sm text-ink-soft pt-2">
+          <div>
+            <dt class="text-[0.65rem] uppercase tracking-[0.18em]">Dates</dt>
+            <dd class="text-base text-ink">{dateLabel}</dd>
+          </div>
+          <div>
+            <dt class="text-[0.65rem] uppercase tracking-[0.18em]">Location</dt>
+            <dd class="text-base text-ink">{location.name}{location.region ? `, ${location.region}` : ''}</dd>
+          </div>
+          {cheapest !== null && (
+            <div>
+              <dt class="text-[0.65rem] uppercase tracking-[0.18em]">From</dt>
+              <dd class="text-base text-ink">{formatPence(cheapest)}</dd>
+            </div>
+          )}
+        </dl>
+      </div>
+      <div class="lg:col-span-5">
+        <Placeholder ratio="4/5" label={`${retreat.name} · cover`} />
+      </div>
+    </div>
+  </section>
+
+  <!-- Sticky Reserve button (desktop top-right, plus mobile sticky bottom bar) -->
+  <div class="hidden lg:block fixed top-24 right-6 z-30" data-reserve-sticky>
+    {isSoldOut ? (
+      <a href="#waitlist" class="inline-flex items-center px-5 py-3 rounded-(--radius-pill) border border-ink/20 bg-cream text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors shadow-(--shadow-soft)">
+        Join waitlist
+      </a>
+    ) : (
+      <a href={`/book/${retreat.slug}`} class="inline-flex items-center px-5 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors shadow-(--shadow-soft)">
+        Reserve a room
+      </a>
+    )}
+  </div>
+
+  <!-- Overview -->
+  <section class="py-16 lg:py-20 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4">
+        <p class="eyebrow">Overview</p>
+      </div>
+      <div class="lg:col-span-7 space-y-6 text-ink-soft text-lg leading-relaxed">
+        <p>{overviewLead}</p>
+        <p class="text-base">A handful of guests. Real food, real silence, and the kind of work that asks something of you. No alcohol. Nothing to perform.</p>
+      </div>
+    </div>
+  </section>
+
+  <Itinerary />
+
+  <!-- Practitioners -->
+  {practitioners.length > 0 && (
+    <section class="py-16 lg:py-24 border-t border-sand/60" id="practitioners">
+      <div class="space-y-3 max-w-2xl mb-10">
+        <p class="eyebrow">Held by</p>
+        <h2>The practitioners.</h2>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {practitioners.map((p) => (
+          <a
+            href={`/practitioners#${p.slug}`}
+            class="rounded-(--radius-card) bg-cream-deep/60 border border-sand/70 p-6 space-y-3 hover:shadow-(--shadow-soft) transition-shadow block"
+          >
+            <Placeholder ratio="1/1" label={p.name} />
+            <div class="space-y-1">
+              <p class="text-[0.65rem] uppercase tracking-[0.18em] text-gold-600">{p.discipline}</p>
+              <h3 class="text-xl">{p.name}</h3>
+              {p.is_tbc && (
+                <p class="text-xs text-ink-soft italic">Practitioner to be confirmed</p>
+              )}
+              {p.role && <p class="text-sm text-ink-soft leading-relaxed">{p.role}</p>}
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <RoomsPricing retreatSlug={retreat.slug} rooms={room_types} addOns={add_ons} />
+
+  <!-- What's included -->
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4 space-y-3">
+        <p class="eyebrow">All in</p>
+        <h2>What's included.</h2>
+        <p class="text-ink-soft text-sm leading-relaxed">No upsells. No surprises. The price covers everything except the optional in-room massage.</p>
+      </div>
+      <ul class="lg:col-span-7 space-y-3">
+        {included.map((line) => (
+          <li class="flex gap-4 items-baseline text-base text-ink-soft leading-relaxed">
+            <span class="text-gold-500" aria-hidden="true">·</span>
+            <span>{line}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <LocationMap
+    lat={location.lat}
+    lng={location.lng}
+    name={location.name}
+    region={location.region}
+    tbcAddress={location.tbc_address}
+    address={location.address}
+  />
+
+  <!-- Waitlist (visible mainly when sold out, anchored from buttons above) -->
+  <section class="py-16 lg:py-24 border-t border-sand/60" id="waitlist">
+    <div class="max-w-2xl mx-auto">
+      <WaitlistForm
+        retreatId={retreat.id}
+        title={isSoldOut ? 'Join the waitlist' : 'Hear about new dates first'}
+        copy={
+          isSoldOut
+            ? 'This weekend is full. Drop your email and we will write to you the moment a room opens up.'
+            : 'Want to know when we add new dates? Drop your email and we will write to you first.'
+        }
+      />
+    </div>
+  </section>
+
+  <!-- Mobile sticky bottom bar -->
+  <div class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-cream/95 backdrop-blur border-t border-sand/60 px-5 py-3 flex items-center justify-between gap-3">
+    {cheapest !== null ? (
+      <p class="text-sm">
+        <span class="text-ink-soft">from </span>
+        <span class="font-display text-lg text-ink">{formatPence(cheapest)}</span>
+      </p>
+    ) : <span></span>}
+    {isSoldOut ? (
+      <a href="#waitlist" class="inline-flex items-center px-5 py-3 rounded-(--radius-pill) border border-ink/30 text-xs uppercase tracking-[0.18em]">
+        Waitlist
+      </a>
+    ) : (
+      <a href={`/book/${retreat.slug}`} class="inline-flex items-center px-5 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em]">
+        Reserve
+      </a>
+    )}
+  </div>
+</BaseLayout>

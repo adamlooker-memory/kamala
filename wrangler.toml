@@ -1,0 +1,57 @@
+#:schema node_modules/wrangler/config-schema.json
+# This file exists primarily so the Astro Cloudflare adapter's platformProxy
+# can expose bindings to `Astro.locals.runtime.env` during local dev.
+# The build artifact (`./dist/_worker.js`) is produced by `astro build`;
+# it is not declared here.
+
+name = "kamala"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PUBLIC_SITE_URL     = "https://kamalaretreats.com"
+NOTIFICATIONS_EMAIL = "adam@trustedmarketing.co.uk"
+
+# ============================================================
+# BINDINGS — uncomment + fill in IDs after provisioning resources.
+# Until provisioned, runtime calls that touch DB/KV/R2 will fail in dev.
+# Static / brand pages are unaffected and build cleanly.
+#
+# Provision (run once, in this order, when ready):
+#   npx wrangler login
+#   npx wrangler d1  create kamala
+#   npx wrangler kv  namespace create SESSION
+#   npx wrangler kv  namespace create RATE_LIMIT
+#   npx wrangler r2  bucket create kamala-media
+# ============================================================
+#
+# [[d1_databases]]
+# binding        = "DB"
+# database_name  = "kamala"
+# database_id    = ""
+# migrations_dir = "drizzle"
+#
+# [[kv_namespaces]]
+# binding = "SESSION"
+# id      = ""
+#
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id      = ""
+#
+# [[r2_buckets]]
+# binding     = "MEDIA"
+# bucket_name = "kamala-media"
+#
+# ============================================================
+# SECRETS — set with `wrangler secret put <NAME>` after deploy.
+# Locally use `.dev.vars` (gitignored, see .dev.vars.example).
+#
+#   RESEND_API_KEY              transactional email
+#   STRIPE_SECRET_KEY
+#   STRIPE_WEBHOOK_SECRET
+#   PAYPAL_CLIENT_ID
+#   PAYPAL_CLIENT_SECRET
+#   BOOKING_TOKEN_SECRET        HMAC key for short-lived lookup tokens
+#   TURNSTILE_SECRET_KEY
+# ============================================================

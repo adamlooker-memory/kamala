@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Privacy"
+  description="How Kamala Retreats handles your personal data, under UK GDPR."
+>
+  <article class="py-12 lg:py-20 mx-auto prose-kamala">
+    <p class="eyebrow">Legal</p>
+    <h1 class="font-light mt-4">Privacy</h1>
+
+    <p>This page explains what information we collect about you, why we collect it, how we keep it, and the rights you have under UK GDPR. If you have questions, write to <a href="mailto:hello@kamalaretreats.com">hello@kamalaretreats.com</a>.</p>
+
+    <h2>Who we are</h2>
+    <p>Kamala Retreats is the data controller for the information you give us through this site, by email, or in connection with a retreat booking.</p>
+
+    <h2>What we collect</h2>
+    <p>When you book a retreat: your name, email, phone (optional), the name of any guest sharing with you, dietary and access information, an emergency contact, and the booking and payment metadata that goes with the transaction.</p>
+    <p>When you join the newsletter: your email and the source (e.g. footer, popup) so we know where it came from.</p>
+    <p>When you write to us: your name, email, and the contents of your message.</p>
+    <p>Through your visit to the site we collect minimal technical information — IP address (hashed for rate-limiting), user agent, and the pages you view. We do not use third-party analytics or advertising trackers.</p>
+
+    <h2>Why we collect it, and the lawful basis</h2>
+    <p>Booking information is processed to fulfil the contract you've entered into with us — to deliver the retreat, communicate with you about it, and meet our legal obligations (tax, accounting). Lawful basis: <em>contract</em>, and <em>legal obligation</em> for the records we're required to keep.</p>
+    <p>Newsletter emails are sent on the basis of <em>consent</em>, captured by a double opt-in. You can withdraw consent at any time using the unsubscribe link at the bottom of every letter.</p>
+    <p>Operational essentials — securing the site, preventing abuse, and replying to enquiries — are processed under <em>legitimate interests</em>.</p>
+
+    <h2>Where your data lives</h2>
+    <p>Our website is hosted on Cloudflare, which means data may be processed in Cloudflare's UK and EU edge regions. We use the following sub-processors:</p>
+    <ul>
+      <li><strong>Cloudflare</strong> — site hosting, the database (D1), file storage (R2), and bot mitigation.</li>
+      <li><strong>Resend</strong> — sending booking confirmations, the newsletter, and replies to enquiries.</li>
+      <li><strong>Stripe</strong> and <strong>PayPal</strong> — processing card and PayPal payments. We never see or store your full card details.</li>
+    </ul>
+    <p>Each of these providers has its own privacy notice, all of which are UK GDPR compliant. We have data processing agreements in place with each.</p>
+
+    <h2>How long we keep it</h2>
+    <p>Booking records are kept for seven years to meet HMRC record-keeping requirements. After that they are deleted or anonymised. Newsletter records are kept for as long as you remain subscribed; once you unsubscribe we keep a minimal suppression record (your email) so we don't accidentally email you again. Contact-form messages are kept for two years unless you ask us to delete sooner.</p>
+
+    <h2>Your rights</h2>
+    <p>Under UK GDPR you have the right to: access the data we hold about you; have inaccurate data corrected; have your data erased where there is no overriding legal basis to keep it; restrict or object to processing; receive your data in a portable format; and withdraw consent at any time.</p>
+    <p>To exercise any of these rights, write to <a href="mailto:hello@kamalaretreats.com">hello@kamalaretreats.com</a>. We'll respond within one month.</p>
+
+    <h2>Complaints</h2>
+    <p>If you're unhappy with how we've handled your data and we haven't been able to resolve it, you have the right to complain to the Information Commissioner's Office (ICO) at <a href="https://ico.org.uk" rel="noopener">ico.org.uk</a>.</p>
+
+    <h2>Cookies</h2>
+    <p>We use a small number of strictly necessary cookies for the booking session. We do not use analytics or advertising cookies.</p>
+
+    <p class="text-xs">Last updated: 2026-05-09</p>
+  </article>
+</BaseLayout>

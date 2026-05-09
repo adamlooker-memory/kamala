@@ -1,0 +1,114 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Placeholder from '../components/Placeholder.astro';
+
+const experiences = [
+  { title: 'Cacao ceremony', body: 'Ceremonial-grade cacao, candlelight, and a journal. The first softening of the weekend.' },
+  { title: 'Gong meditation', body: 'Ninety minutes of sacred sound. Lie down. Don’t speak. Let it move through you.' },
+  { title: 'Somatic release', body: 'Breath and movement, held safely. The work the body has been waiting to do.' },
+  { title: 'Pool floating sound healing', body: 'A warm indoor pool, a sound healer, and your weight given over to the water.' },
+];
+---
+
+<BaseLayout title="Rise. Glow. Return.">
+  <section class="pt-12 lg:pt-20 pb-16 lg:pb-28 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-7 space-y-8">
+      <p class="eyebrow">A weekend to choose yourself</p>
+      <h1 class="font-light">Rise through the<br /><em class="text-gold-600">murky waters.</em></h1>
+      <p class="text-lg text-ink-soft max-w-xl leading-relaxed">
+        Kamala is a small, considered retreat held in private estates in the UK.
+        Three days. A handful of guests. Real food, real silence, and the kind of work that asks something of you.
+      </p>
+      <div class="flex flex-wrap gap-3 pt-2">
+        <a href="/retreats" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">See the October retreat</a>
+        <a href="/philosophy" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors">Read the philosophy</a>
+      </div>
+    </div>
+    <div class="lg:col-span-5">
+      <Placeholder ratio="4/5" label="Hero · candlelight, linen, low light" />
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4">
+        <p class="eyebrow">What is Kamala</p>
+      </div>
+      <div class="lg:col-span-7 space-y-6 text-ink-soft text-lg leading-relaxed">
+        <p>We don&rsquo;t promise transformation. We hold the space for it.</p>
+        <p class="text-base">A handful of guests. Real food, real silence, and the kind of work that asks something of you. No alcohol. Nothing to perform.</p>
+        <p><a href="/about" class="text-gold-600 underline underline-offset-4 decoration-1 hover:text-gold-700">More about Kamala</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="mb-12 max-w-2xl">
+      <p class="eyebrow">Signature experiences</p>
+      <h2 class="mt-4">Slowly, deliberately, the weekend unfolds.</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {experiences.map(exp => (
+        <article class="space-y-4">
+          <Placeholder ratio="1/1" />
+          <h3 class="text-xl">{exp.title}</h3>
+          <p class="text-sm text-ink-soft leading-relaxed">{exp.body}</p>
+        </article>
+      ))}
+    </div>
+    <p class="mt-12">
+      <a href="/the-experience" class="text-gold-600 underline underline-offset-4 decoration-1 hover:text-gold-700">See the full weekend</a>
+    </p>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6">
+        <Placeholder ratio="3/4" label="Estate · exterior" />
+      </div>
+      <div class="lg:col-span-6 space-y-6">
+        <p class="eyebrow">The inaugural retreat</p>
+        <h2>October 2 &ndash; 4. A private estate in the UK.</h2>
+        <p class="text-ink-soft leading-relaxed text-lg">Twelve guests, no more. Friday evening to Sunday afternoon. All meals, all rituals, all of it.</p>
+        <div class="pt-2">
+          <a href="/retreats" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Reserve a room</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <figure class="max-w-3xl mx-auto text-center space-y-6">
+      <p class="eyebrow">From our guests</p>
+      <blockquote class="text-3xl lg:text-4xl font-display italic text-ink leading-snug">
+        &ldquo;Testimonial copy from the inaugural cohort.&rdquo;
+      </blockquote>
+      <figcaption class="text-sm text-ink-soft">
+        <span class="wordmark text-xs">First name &middot; Location</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 space-y-4">
+        <p class="eyebrow">Stay close</p>
+        <h2>A quiet letter, once a month.</h2>
+        <p class="text-ink-soft leading-relaxed">New retreat dates first, occasional reflections from Holly, nothing else.</p>
+      </div>
+      <div class="lg:col-span-6">
+        <form method="post" action="/api/newsletter" class="flex flex-col sm:flex-row gap-3 max-w-xl">
+          <input
+            type="email"
+            name="email"
+            required
+            autocomplete="email"
+            placeholder="your@email.com"
+            class="flex-1 px-5 py-4 bg-cream-deep border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500"
+          />
+          <button type="submit" class="px-6 py-4 bg-ink text-cream text-xs uppercase tracking-[0.18em] rounded-(--radius-card) hover:bg-gold-700 transition-colors">Join the list</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

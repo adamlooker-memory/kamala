@@ -1,0 +1,358 @@
+---
+/**
+ * /my-booking/[token] — server-rendered, single-use.
+ *
+ * Validates the HMAC-signed token, looks up its sha256 in
+ * `booking_lookup_tokens`, checks expiry + not consumed, and marks consumed.
+ * On any failure, shows a "link expired" view with an option to request a
+ * new one.
+ */
+import { env } from 'cloudflare:workers';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { and, eq, isNull } from 'drizzle-orm';
+import { getDb } from '../../db/client';
+import {
+  bookings,
+  bookingLookupTokens,
+  retreats,
+  roomTypes,
+  locations,
+  addOns as addOnRows,
+  type BookingAddonSelection,
+  type DietaryInfo,
+} from '../../db/schema';
+import { verifyAndHashLookupToken } from '../../lib/booking/lookup';
+import { formatDateRange, formatPence } from '../../lib/format';
+
+export const prerender = false;
+
+const { token } = Astro.params;
+const secret = env.BOOKING_TOKEN_SECRET;
+
+type ResolvedBooking = {
+  code: string;
+  retreatTitle: string;
+  retreatDates: string;
+  retreatLocation: string;
+  roomName: string;
+  occupancyLabel: string;
+  guestCount: number;
+  leadName: string;
+  leadEmail: string;
+  guest2Name: string | null;
+  dietaryLead: DietaryInfo | null;
+  dietaryGuest2: DietaryInfo | null;
+  notes: string | null;
+  addons: Array<{ name: string; quantity: number; subtotalPence: number }>;
+  totalPence: number;
+  status: string;
+  paymentStatus: string;
+};
+
+let resolved: ResolvedBooking | null = null;
+let invalidReason: 'missing' | 'expired' | 'invalid' | null = null;
+
+if (!token || typeof token !== 'string') {
+  invalidReason = 'missing';
+} else if (!secret) {
+  console.error('[my-booking] BOOKING_TOKEN_SECRET not set');
+  invalidReason = 'invalid';
+} else {
+  const tokenHash = await verifyAndHashLookupToken(token, secret);
+  if (!tokenHash) {
+    invalidReason = 'invalid';
+  } else {
+    const db = getDb(env);
+    const tokenRows = await db
+      .select()
+      .from(bookingLookupTokens)
+      .where(
+        and(
+          eq(bookingLookupTokens.token_hash, tokenHash),
+          isNull(bookingLookupTokens.consumed_at),
+        ),
+      )
+      .limit(1);
+
+    if (tokenRows.length === 0) {
+      invalidReason = 'expired';
+    } else {
+      const row = tokenRows[0]!;
+      const expires =
+        row.expires_at instanceof Date
+          ? row.expires_at.getTime()
+          : new Date(row.expires_at as unknown as string | number).getTime();
+      if (Number.isFinite(expires) && expires < Date.now()) {
+        invalidReason = 'expired';
+      } else {
+        // Mark consumed.
+        await db
+          .update(bookingLookupTokens)
+          .set({ consumed_at: new Date() })
+          .where(eq(bookingLookupTokens.id, row.id));
+
+        // Load booking + retreat + room + location.
+        const bookingRows = await db
+          .select({
+            booking: bookings,
+            retreat: retreats,
+            room: roomTypes,
+            location: locations,
+          })
+          .from(bookings)
+          .leftJoin(retreats, eq(bookings.retreat_id, retreats.id))
+          .leftJoin(roomTypes, eq(bookings.room_type_id, roomTypes.id))
+          .leftJoin(locations, eq(retreats.location_id, locations.id))
+          .where(eq(bookings.id, row.booking_id))
+          .limit(1);
+
+        if (bookingRows.length === 0) {
+          invalidReason = 'invalid';
+        } else {
+          const { booking, retreat, room, location } = bookingRows[0]!;
+
+          const addonSelections: BookingAddonSelection[] = Array.isArray(
+            booking.addons,
+          )
+            ? (booking.addons as BookingAddonSelection[])
+            : [];
+
+          // Look up names of selected add-ons in one query.
+          let addonNames = new Map<number, string>();
+          if (addonSelections.length > 0 && retreat?.id !== undefined) {
+            const ids = addonSelections.map((a) => a.add_on_id);
+            const allAddons = await db
+              .select()
+              .from(addOnRows)
+              .where(eq(addOnRows.retreat_id, retreat.id));
+            for (const a of allAddons) {
+              if (ids.includes(a.id)) addonNames.set(a.id, a.name);
+            }
+          }
+
+          const retreatTitle = retreat?.name ?? 'Kamala Retreat';
+          const retreatDates =
+            retreat?.starts_at && retreat.ends_at
+              ? formatDateRange(retreat.starts_at, retreat.ends_at)
+              : '';
+          const retreatLocation = location
+            ? location.tbc_address
+              ? `${location.name} — exact address shared closer to the weekend`
+              : `${location.name}${location.address ? ` — ${location.address}` : ''}`
+            : '';
+
+          resolved = {
+            code: booking.confirmation_code,
+            retreatTitle,
+            retreatDates,
+            retreatLocation,
+            roomName: room?.name ?? 'Room',
+            occupancyLabel:
+              booking.occupancy === 'pair' ? 'Two guests sharing' : 'Solo occupancy',
+            guestCount: booking.guest_count,
+            leadName: `${booking.lead_first_name} ${booking.lead_last_name}`.trim(),
+            leadEmail: booking.lead_email,
+            guest2Name:
+              booking.guest2_first_name || booking.guest2_last_name
+                ? `${booking.guest2_first_name ?? ''} ${booking.guest2_last_name ?? ''}`.trim()
+                : null,
+            dietaryLead: (booking.dietary_lead as DietaryInfo) ?? null,
+            dietaryGuest2: (booking.dietary_guest2 as DietaryInfo) ?? null,
+            notes: booking.notes ?? null,
+            addons: addonSelections.map((a) => ({
+              name: addonNames.get(a.add_on_id) ?? 'Add-on',
+              quantity: a.quantity,
+              subtotalPence: a.unit_price_pence * a.quantity,
+            })),
+            totalPence: booking.total_pence,
+            status: booking.status,
+            paymentStatus: booking.payment_status,
+          };
+        }
+      }
+    }
+  }
+}
+
+const dietaryLines = (info: DietaryInfo | null): string[] => {
+  if (!info) return [];
+  const out: string[] = [];
+  if (info.vegan) out.push('Vegan');
+  if (info.extra_allergens) out.push(`Allergens: ${info.extra_allergens}`);
+  if (info.notes) out.push(info.notes);
+  return out;
+};
+---
+
+<BaseLayout title="Your booking">
+  {invalidReason ? (
+    <section class="py-16 lg:py-24 max-w-(--container-prose) mx-auto text-center">
+      <p class="eyebrow">Your booking</p>
+      <h1 class="font-light mt-4">This link has expired.</h1>
+      <p class="text-ink-soft text-lg leading-relaxed mt-6">
+        Lookup links are single-use and only valid for 15 minutes — for your security.
+        Request a fresh one and we'll have you in.
+      </p>
+      <div class="mt-10">
+        <a
+          href="/my-booking"
+          class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors"
+        >
+          Request a new link
+        </a>
+      </div>
+      <p class="text-sm text-ink-soft mt-8">
+        Stuck? Write to
+        <a href="mailto:hello@kamalaretreats.com" class="text-gold-600 underline underline-offset-4 decoration-1">hello@kamalaretreats.com</a>.
+      </p>
+    </section>
+  ) : resolved ? (
+    <section class="py-12 lg:py-20 max-w-3xl mx-auto">
+      <div class="mb-10">
+        <p class="eyebrow">Your booking</p>
+        <h1 class="font-light mt-4">Welcome back, {resolved.leadName.split(' ')[0]}.</h1>
+        <p class="text-ink-soft text-lg leading-relaxed mt-4">
+          Everything we have on file for your weekend. Save this page or take a screenshot — the link itself is single-use.
+        </p>
+      </div>
+
+      <div class="bg-cream-deep border border-sand rounded-(--radius-card) p-8 lg:p-10 space-y-8">
+        <div class="grid sm:grid-cols-2 gap-6">
+          <div>
+            <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Confirmation</p>
+            <p class="mt-1 text-2xl font-mono tracking-[0.12em] text-ink">{resolved.code}</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Status</p>
+            <p class="mt-1 text-ink capitalize">{resolved.status} &middot; {resolved.paymentStatus}</p>
+          </div>
+        </div>
+
+        <hr />
+
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Retreat</p>
+          <h2 class="mt-1 text-2xl">{resolved.retreatTitle}</h2>
+          {resolved.retreatDates && (
+            <p class="text-ink-soft mt-1">{resolved.retreatDates}</p>
+          )}
+          {resolved.retreatLocation && (
+            <p class="text-ink-soft text-sm mt-1">{resolved.retreatLocation}</p>
+          )}
+        </div>
+
+        <hr />
+
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Room</p>
+          <p class="mt-1 text-ink">{resolved.roomName}</p>
+          <p class="text-ink-soft text-sm">{resolved.occupancyLabel}</p>
+        </div>
+
+        <hr />
+
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Guests</p>
+          <ul class="mt-2 space-y-3 text-ink">
+            <li>
+              <span class="text-ink">{resolved.leadName}</span>
+              <span class="text-ink-soft text-sm"> &middot; {resolved.leadEmail}</span>
+              {dietaryLines(resolved.dietaryLead).length > 0 && (
+                <ul class="mt-1 ml-4 text-sm text-ink-soft list-disc">
+                  {dietaryLines(resolved.dietaryLead).map((line) => <li>{line}</li>)}
+                </ul>
+              )}
+            </li>
+            {resolved.guest2Name && (
+              <li>
+                <span class="text-ink">{resolved.guest2Name}</span>
+                {dietaryLines(resolved.dietaryGuest2).length > 0 && (
+                  <ul class="mt-1 ml-4 text-sm text-ink-soft list-disc">
+                    {dietaryLines(resolved.dietaryGuest2).map((line) => <li>{line}</li>)}
+                  </ul>
+                )}
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {resolved.addons.length > 0 && (
+          <>
+            <hr />
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Add-ons</p>
+              <ul class="mt-2 space-y-1 text-ink">
+                {resolved.addons.map((a) => (
+                  <li class="flex justify-between gap-4">
+                    <span>{a.name}{a.quantity > 1 ? ` × ${a.quantity}` : ''}</span>
+                    <span class="text-ink-soft">{formatPence(a.subtotalPence)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+
+        {resolved.notes && (
+          <>
+            <hr />
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Your notes</p>
+              <p class="mt-2 text-ink-soft whitespace-pre-line">{resolved.notes}</p>
+            </div>
+          </>
+        )}
+
+        <hr />
+
+        <div class="flex justify-between items-baseline">
+          <p class="text-xs uppercase tracking-[0.18em] text-gold-600">Total</p>
+          <p class="text-2xl">{formatPence(resolved.totalPence)}</p>
+        </div>
+      </div>
+
+      <div class="mt-10 grid md:grid-cols-2 gap-6">
+        <div class="bg-cream-deep/60 border border-sand/60 rounded-(--radius-card) p-6">
+          <h3 class="text-lg">Before you arrive</h3>
+          <p class="text-sm text-ink-soft leading-relaxed mt-2">
+            We'll write to you the week before with directions, what to pack and the rhythm of the weekend. In the meantime, the welcome pack lives below — open it when you have a quiet ten minutes.
+          </p>
+          <p class="mt-4">
+            <a
+              href="/welcome-pack.pdf"
+              class="text-gold-600 underline underline-offset-4 decoration-1 text-sm"
+            >
+              Download the welcome pack (PDF)
+            </a>
+          </p>
+        </div>
+        <div class="bg-cream-deep/60 border border-sand/60 rounded-(--radius-card) p-6">
+          <h3 class="text-lg">Need to update something?</h3>
+          <p class="text-sm text-ink-soft leading-relaxed mt-2">
+            Dietary changes, an emergency contact, or just a question — write to us and Holly or someone close to her will reply.
+          </p>
+          <p class="mt-4">
+            <a
+              href="mailto:hello@kamalaretreats.com"
+              class="text-gold-600 underline underline-offset-4 decoration-1 text-sm"
+            >
+              hello@kamalaretreats.com
+            </a>
+          </p>
+        </div>
+      </div>
+
+      <p class="text-xs text-ink-soft text-center mt-10">
+        All bookings are binding and non-refundable. See our
+        <a href="/legal/booking-terms" class="text-gold-600 underline underline-offset-4 decoration-1">booking terms</a>.
+      </p>
+    </section>
+  ) : (
+    <section class="py-16 lg:py-24 max-w-(--container-prose) mx-auto text-center">
+      <h1 class="font-light">Something isn't quite right.</h1>
+      <p class="text-ink-soft mt-4">
+        <a href="/my-booking" class="text-gold-600 underline underline-offset-4 decoration-1">Try the lookup again</a>.
+      </p>
+    </section>
+  )}
+</BaseLayout>

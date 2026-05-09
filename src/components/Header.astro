@@ -1,0 +1,76 @@
+---
+const nav = [
+  { href: '/retreats', label: 'Retreats' },
+  { href: '/the-experience', label: 'The Experience' },
+  { href: '/practitioners', label: 'Practitioners' },
+  { href: '/philosophy', label: 'Philosophy' },
+  { href: '/about', label: 'About' },
+  { href: '/faq', label: 'FAQ' },
+];
+
+const path = Astro.url.pathname;
+const isActive = (href: string) => href === '/' ? path === '/' : path.startsWith(href);
+---
+
+<header class="border-b border-sand/60 bg-cream/80 backdrop-blur-sm sticky top-0 z-40">
+  <div class="mx-auto max-w-(--container-page) px-6 lg:px-10 flex items-center justify-between gap-6 h-20">
+    <a href="/" class="flex items-center gap-3 group" aria-label="Kamala Retreats — home">
+      <img src="/brand/icon.svg" alt="" class="h-9 w-9 transition-opacity group-hover:opacity-80" onerror="this.replaceWith(Object.assign(document.createElement('span'), { textContent: '✦', style: 'color:#b78f38;font-size:1.5rem;line-height:1' }))" />
+      <img src="/brand/wordmark.svg" alt="Kamala" class="h-5 transition-opacity group-hover:opacity-80" onerror="this.replaceWith(Object.assign(document.createElement('span'), { textContent: 'KAMALA', className: 'wordmark text-ink text-base' }))" />
+    </a>
+
+    <nav class="hidden lg:flex items-center gap-8" aria-label="Primary">
+      {nav.map(item => (
+        <a
+          href={item.href}
+          class:list={[
+            'text-sm tracking-wide transition-colors',
+            isActive(item.href) ? 'text-gold-600' : 'text-ink-soft hover:text-ink'
+          ]}
+        >{item.label}</a>
+      ))}
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <a href="/my-booking" class="hidden sm:inline-block text-xs text-ink-soft hover:text-ink tracking-[0.18em] uppercase">Manage booking</a>
+      <a
+        href="/retreats"
+        class="hidden md:inline-flex items-center px-4 py-2 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors"
+      >Reserve</a>
+      <button
+        type="button"
+        class="lg:hidden p-2 -mr-2 text-ink"
+        aria-label="Open menu"
+        data-mobile-menu-toggle
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="lg:hidden hidden border-t border-sand/60 bg-cream"
+    data-mobile-menu
+  >
+    <nav class="px-6 py-6 flex flex-col gap-4" aria-label="Mobile">
+      {nav.map(item => (
+        <a href={item.href} class="text-base text-ink-soft hover:text-ink py-1">{item.label}</a>
+      ))}
+      <hr />
+      <a href="/my-booking" class="text-sm text-ink-soft hover:text-ink py-1">Manage booking</a>
+      <a href="/retreats" class="inline-flex items-center justify-center px-4 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em]">Reserve</a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('[data-mobile-menu-toggle]');
+  const menu = document.querySelector<HTMLElement>('[data-mobile-menu]');
+  toggle?.addEventListener('click', () => {
+    if (!menu) return;
+    menu.classList.toggle('hidden');
+    toggle.setAttribute('aria-expanded', menu.classList.contains('hidden') ? 'false' : 'true');
+  });
+</script>

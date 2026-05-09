@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Placeholder from '../components/Placeholder.astro';
+
+interface Practitioner {
+  name: string;
+  role: string;
+  bio: string;
+  bioTbc?: boolean;
+  link?: { label: string; href: string };
+  tbcSlot?: boolean;
+}
+
+const practitioners: Practitioner[] = [
+  {
+    name: 'Lacey Shakti',
+    role: 'Gong & Kundalini Yoga',
+    bio: 'Bio to be drafted with Lacey. Lineage, training, what guests can expect from the gong and kundalini work, and why we love working with her.',
+    bioTbc: true,
+    link: { label: '@laceywutopia', href: 'https://www.instagram.com/laceywutopia' },
+  },
+  {
+    name: 'Phoenix Breathwork Method',
+    role: 'Somatic Energy & Breathwork',
+    bio: 'Bio to be drafted with Phoenix Breathwork Method. Approach, training, what the somatic release session involves and how it is held safely.',
+    bioTbc: true,
+    link: { label: 'phoenixbreathworkmethod.com', href: 'https://phoenixbreathworkmethod.com/' },
+  },
+  {
+    name: 'Sound healing',
+    role: 'Sunday pool session',
+    bio: 'Practitioner to be confirmed for the Sunday pool floating sound healing.',
+    bioTbc: true,
+    tbcSlot: true,
+  },
+  {
+    name: 'Cacao & Reishi rituals',
+    role: 'Friday opening · Saturday closing',
+    bio: 'Cacao and reishi ceremony lead — may be held by Holly or the weekend MC. To be confirmed per retreat.',
+    bioTbc: true,
+    tbcSlot: true,
+  },
+];
+---
+
+<BaseLayout
+  title="Practitioners"
+  description="The people who hold the room. Practitioners chosen for skill, depth, and how they hold space together."
+>
+  <section class="pt-12 lg:pt-20 pb-16 lg:pb-24 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-7 space-y-8">
+      <p class="eyebrow">Practitioners</p>
+      <h1 class="font-light">The people who <em class="text-gold-600">hold the room.</em></h1>
+      <p class="text-lg text-ink-soft max-w-xl leading-relaxed">
+        Every practitioner on a Kamala weekend is chosen with care. We're not assembling a programme of workshops &mdash; we're holding a single arc across three days.
+      </p>
+    </div>
+    <div class="lg:col-span-5">
+      <Placeholder ratio="4/5" label="Hands · instruments" />
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4">
+        <p class="eyebrow">How we choose</p>
+      </div>
+      <div class="lg:col-span-7 space-y-6 text-ink-soft text-lg leading-relaxed">
+        <p>
+          We work with practitioners we've sat with ourselves. People with depth in their craft, who know how to hold a room when the room gets heavy, and who don't perform their lineage. Skill, and humility, in equal measure.
+        </p>
+        <p>
+          Each person we bring in has to fit the shape of the arc &mdash; what comes before them, what comes after, what the room will need by the time they arrive.
+        </p>
+        <p>The line-up evolves retreat to retreat. Some practitioners return; new ones join when the weekend calls for them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="mb-12 max-w-2xl">
+      <p class="eyebrow">The line-up</p>
+      <h2 class="mt-4">Who'll be holding the weekend.</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-2 gap-x-10 gap-y-16">
+      {practitioners.map(p => (
+        <article class="space-y-5">
+          <div class="relative">
+            <Placeholder ratio="4/5" label={`${p.name} · portrait`} />
+            {p.tbcSlot && (
+              <span class="absolute top-3 right-3 inline-flex items-center text-[0.65rem] uppercase tracking-[0.22em] text-gold-700/90 bg-cream/95 border border-gold-200 rounded-(--radius-pill) px-2.5 py-1">
+                TBC
+              </span>
+            )}
+          </div>
+          <div class="space-y-2">
+            <p class="eyebrow">{p.role}</p>
+            <h3 class="text-2xl">{p.name}</h3>
+          </div>
+          <div class="text-ink-soft leading-relaxed">
+            {p.bioTbc ? (
+              <p>
+                <span class="inline-block align-baseline text-[0.65rem] uppercase tracking-[0.22em] text-gold-700/80 bg-gold-100/60 border border-gold-200/60 rounded-(--radius-pill) px-2 py-0.5 mr-2">TBC</span>
+                {p.bio}
+              </p>
+            ) : (
+              <p>{p.bio}</p>
+            )}
+          </div>
+          {p.link && (
+            <p class="text-sm">
+              <a href={p.link.href} class="text-gold-600 underline underline-offset-4 decoration-1 hover:text-gold-700" target="_blank" rel="noopener noreferrer">
+                {p.link.label}
+              </a>
+            </p>
+          )}
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="rounded-(--radius-card) bg-cream-deep border border-sand/70 px-8 py-14 lg:px-16 lg:py-20 text-center space-y-6">
+      <p class="eyebrow">Next</p>
+      <h2 class="max-w-2xl mx-auto">See where the work happens.</h2>
+      <div class="flex flex-wrap justify-center gap-3 pt-4">
+        <a href="/retreats/october-2026" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">See the October retreat</a>
+        <a href="/faq" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors">Read the FAQ</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

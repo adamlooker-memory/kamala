@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Placeholder from '../components/Placeholder.astro';
+
+const forYou = [
+  "You're tired in a way sleep doesn't fix.",
+  "You've done some inner work and you're ready to do more, in a room with people who won't flinch.",
+  "You want time without your phone, without alcohol, without small talk.",
+  "You're willing to be uncomfortable for a weekend if it means something shifts.",
+  "You don't need a full week. You need three days held properly.",
+];
+
+const notForYou = [
+  "This isn't a spa break. There's a spa, and you'll use it, but that's not the point.",
+  "It isn't a party. There's no alcohol. The lights go down at ten.",
+  "It isn't a silent retreat or a religious retreat. We sit, we eat, we talk, we cry sometimes. There's structure, and there's space.",
+  "It isn't for people who want to be entertained. The weekend asks you to participate.",
+  "If you're in acute crisis or actively unwell, this isn't the right setting. Please look after yourself first and come to us when you're ready.",
+];
+
+const expectations = [
+  { title: 'Small groups', body: 'We cap numbers deliberately so the work stays intimate.' },
+  { title: 'Curated practitioners', body: 'Every modality on the schedule has been chosen for how it sits with the rest of the weekend.' },
+  { title: 'Real food', body: 'Seasonal, generous, dairy free, gluten free, nut free across the board.' },
+  { title: 'Private estates', body: 'We hire whole houses so the group has the space to itself.' },
+  { title: 'Honest holding', body: "We don't oversell, we don't perform, and we don't pretend the weekend will fix you. It won't. But it might give you the room to start." },
+];
+---
+
+<BaseLayout
+  title="About"
+  description="A retreat built around the work, not around the photo. Why Kamala exists, who it's for, and what to expect."
+>
+  <section class="pt-12 lg:pt-20 pb-16 lg:pb-24 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-7 space-y-8">
+      <p class="eyebrow">About Kamala</p>
+      <h1 class="font-light">A retreat built around <em class="text-gold-600">the work,</em> not around the photo.</h1>
+      <p class="text-lg text-ink-soft max-w-xl leading-relaxed">
+        There are a lot of weekends being sold as wellness. Most of them are holidays in soft lighting. Kamala is something else.
+      </p>
+    </div>
+    <div class="lg:col-span-5">
+      <Placeholder ratio="4/5" label="Holly · portrait" />
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4">
+        <p class="eyebrow">Holly's story</p>
+      </div>
+      <div class="lg:col-span-7 prose-kamala">
+        <p>
+          <span class="inline-block align-baseline text-[0.65rem] uppercase tracking-[0.22em] text-gold-700/80 bg-gold-100/60 border border-gold-200/60 rounded-(--radius-pill) px-2 py-0.5 mr-2">TBC</span>
+          Holly to provide her story in her own words — two or three paragraphs, first person, on what brought her to this work and why Kamala exists in the form it does.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4">
+        <p class="eyebrow">Why Kamala exists</p>
+      </div>
+      <div class="lg:col-span-7 space-y-6 text-ink-soft text-lg leading-relaxed">
+        <p>There are a lot of weekends being sold as wellness. Most of them are holidays in soft lighting.</p>
+        <p>
+          Kamala is something else. We built it for the moments in between &mdash; the seasons of life that ask you to slow down and pay attention. The grief you haven't sat with. The decision you've been avoiding. The version of you that's quietly asking to be let through.
+        </p>
+        <p>We hold three days. We feed you well. We bring in practitioners who know what they're doing. The rest is yours.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="mb-12 max-w-2xl">
+      <p class="eyebrow">Honestly</p>
+      <h2 class="mt-4">Who it's for, and who it's not.</h2>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-16">
+      <div class="space-y-6">
+        <h3 class="text-2xl">Who it's for</h3>
+        <ul class="space-y-5">
+          {forYou.map(item => (
+            <li class="flex gap-4 text-ink-soft leading-relaxed">
+              <span class="flex-shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-gold-500" aria-hidden="true"></span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="space-y-6 lg:border-l lg:border-sand/60 lg:pl-10">
+        <h3 class="text-2xl">Who it's not for</h3>
+        <ul class="space-y-5">
+          {notForYou.map(item => (
+            <li class="flex gap-4 text-ink-soft leading-relaxed">
+              <span class="flex-shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-mist" aria-hidden="true"></span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="mb-12 max-w-2xl">
+      <p class="eyebrow">What you can expect</p>
+      <h2 class="mt-4">Held with care, every detail.</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12">
+      {expectations.map(item => (
+        <article class="space-y-3">
+          <h3 class="text-xl">{item.title}</h3>
+          <p class="text-ink-soft leading-relaxed">{item.body}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-7 space-y-6">
+        <p class="eyebrow">Next</p>
+        <h2>Read on, or come and meet it.</h2>
+        <p class="text-ink-soft leading-relaxed text-lg max-w-xl">
+          The philosophy explains why we hold the weekend the way we do. The October retreat is the first one we're opening to guests.
+        </p>
+        <div class="flex flex-wrap gap-3 pt-2">
+          <a href="/philosophy" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">See the philosophy</a>
+          <a href="/retreats/october-2026" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors">View the October retreat</a>
+        </div>
+      </div>
+      <div class="lg:col-span-5">
+        <Placeholder ratio="3/4" label="Kamala · still life" />
+      </div>
+    </div>
+  </section>
+</BaseLayout>

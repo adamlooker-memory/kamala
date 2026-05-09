@@ -1,0 +1,139 @@
+---
+/**
+ * /my-booking — passwordless lookup form.
+ *
+ * Submits to /api/my-booking/lookup via fetch. On 200 with a token, the page
+ * redirects to /my-booking/[token]. Errors are shown inline; we never reveal
+ * whether the email or code was wrong.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export const prerender = false;
+const prefillEmail = Astro.url.searchParams.get('email') ?? '';
+const prefillCode = Astro.url.searchParams.get('code') ?? '';
+---
+
+<BaseLayout
+  title="View your booking"
+  description="Look up your Kamala booking with the email and confirmation code we sent on booking."
+>
+  <section class="py-16 lg:py-24 max-w-(--container-prose) mx-auto">
+    <div class="text-center mb-10">
+      <p class="eyebrow">Your booking</p>
+      <h1 class="font-light mt-4">View your booking.</h1>
+      <p class="text-ink-soft text-lg leading-relaxed mt-6 max-w-xl mx-auto">
+        Enter the email you booked with and the confirmation code we sent.
+        We'll send a secure link to your inbox and take you straight to it.
+      </p>
+    </div>
+
+    <form
+      id="lookup-form"
+      method="post"
+      action="/api/my-booking/lookup"
+      class="bg-cream-deep border border-sand rounded-(--radius-card) p-8 lg:p-10 space-y-6"
+      novalidate
+    >
+      <div class="space-y-2">
+        <label for="email" class="block text-xs uppercase tracking-[0.18em] text-ink-soft">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          inputmode="email"
+          value={prefillEmail}
+          class="w-full px-4 py-3 bg-cream border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500"
+          placeholder="your@email.com"
+        />
+      </div>
+
+      <div class="space-y-2">
+        <label for="code" class="block text-xs uppercase tracking-[0.18em] text-ink-soft">Confirmation code</label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          required
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          maxlength="12"
+          value={prefillCode}
+          class="w-full px-4 py-3 bg-cream border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500 font-mono tracking-[0.12em] uppercase"
+          placeholder="e.g. K3M7Q9XR"
+        />
+        <p class="text-xs text-ink-soft">Eight characters, in the email we sent on booking.</p>
+      </div>
+
+      <div id="lookup-error" class="hidden text-sm text-ink bg-cream border border-gold-500/40 rounded-(--radius-card) px-4 py-3" role="alert"></div>
+
+      <button
+        type="submit"
+        id="lookup-submit"
+        class="w-full px-6 py-4 bg-ink text-cream text-xs uppercase tracking-[0.18em] rounded-(--radius-card) hover:bg-gold-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        Find my booking
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-ink-soft mt-8">
+      Lost the email entirely? Write to
+      <a href="mailto:hello@kamalaretreats.com" class="text-gold-600 underline underline-offset-4 decoration-1">hello@kamalaretreats.com</a>
+      and we'll sort it.
+    </p>
+  </section>
+</BaseLayout>
+
+<script>
+  const form = document.getElementById('lookup-form') as HTMLFormElement | null;
+  const errBox = document.getElementById('lookup-error') as HTMLDivElement | null;
+  const submit = document.getElementById('lookup-submit') as HTMLButtonElement | null;
+
+  function showError(msg: string) {
+    if (!errBox) return;
+    errBox.textContent = msg;
+    errBox.classList.remove('hidden');
+  }
+
+  function clearError() {
+    if (!errBox) return;
+    errBox.textContent = '';
+    errBox.classList.add('hidden');
+  }
+
+  if (form && submit) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearError();
+      submit.disabled = true;
+      submit.textContent = 'Looking…';
+
+      const data = new FormData(form);
+      const payload = {
+        email: String(data.get('email') ?? ''),
+        code: String(data.get('code') ?? ''),
+      };
+
+      try {
+        const res = await fetch('/api/my-booking/lookup', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = (await res.json()) as { ok: boolean; token?: string; error?: string };
+        if (res.ok && body.ok && body.token) {
+          window.location.href = `/my-booking/${body.token}`;
+          return;
+        }
+        showError(body.error || "We couldn't find a matching booking.");
+      } catch {
+        showError('Something went wrong. Please try again.');
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Find my booking';
+      }
+    });
+  }
+</script>

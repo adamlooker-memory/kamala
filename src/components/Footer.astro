@@ -1,0 +1,96 @@
+---
+const year = new Date().getFullYear();
+
+const columns = [
+  {
+    heading: 'Visit',
+    links: [
+      { href: '/retreats', label: 'Retreats' },
+      { href: '/the-experience', label: 'The experience' },
+      { href: '/practitioners', label: 'Practitioners' },
+    ],
+  },
+  {
+    heading: 'About',
+    links: [
+      { href: '/about', label: 'Our story' },
+      { href: '/philosophy', label: 'Philosophy' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
+  {
+    heading: 'Help',
+    links: [
+      { href: '/faq', label: 'FAQ' },
+      { href: '/my-booking', label: 'Manage booking' },
+    ],
+  },
+  {
+    heading: 'Legal',
+    links: [
+      { href: '/legal/booking-terms', label: 'Booking terms' },
+      { href: '/legal/privacy', label: 'Privacy policy' },
+      { href: '/legal/terms', label: 'Terms of use' },
+    ],
+  },
+];
+---
+
+<footer class="mt-24 border-t border-sand/60 bg-cream-deep">
+  <div class="mx-auto max-w-(--container-page) px-6 lg:px-10 pt-16 pb-10">
+    <div class="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
+      <div class="space-y-6">
+        <a href="/" class="inline-flex items-center gap-3" aria-label="Kamala Retreats — home">
+          <img src="/brand/icon.svg" alt="" class="h-10 w-10" onerror="this.style.display='none'" />
+          <img src="/brand/wordmark.svg" alt="Kamala" class="h-5" onerror="this.replaceWith(Object.assign(document.createElement('span'), { textContent: 'KAMALA', className: 'wordmark text-ink text-base' }))" />
+        </a>
+        <p class="text-sm text-ink-soft max-w-xs leading-relaxed">
+          Weekend retreats at private estates across the UK. Held with care, curated with intention.
+        </p>
+
+        <form
+          class="mt-6 flex flex-col gap-3 max-w-sm"
+          data-newsletter-form
+          method="post"
+          action="/api/newsletter"
+        >
+          <label for="footer-newsletter" class="eyebrow">Stay in touch</label>
+          <div class="flex gap-2">
+            <input
+              id="footer-newsletter"
+              type="email"
+              name="email"
+              required
+              autocomplete="email"
+              placeholder="your@email.com"
+              class="flex-1 px-4 py-3 bg-cream border border-sand rounded-(--radius-card) text-sm placeholder:text-mist focus:outline-none focus:border-gold-500"
+            />
+            <button
+              type="submit"
+              class="px-5 py-3 bg-ink text-cream text-xs uppercase tracking-[0.18em] rounded-(--radius-card) hover:bg-gold-700 transition-colors"
+            >Subscribe</button>
+          </div>
+          <p class="text-xs text-mist">Quiet emails. Real news. Unsubscribe anytime.</p>
+        </form>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-8">
+        {columns.map(col => (
+          <div>
+            <h4 class="eyebrow mb-4">{col.heading}</h4>
+            <ul class="space-y-2.5">
+              {col.links.map(link => (
+                <li><a href={link.href} class="text-sm text-ink-soft hover:text-ink transition-colors">{link.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="mt-16 pt-8 border-t border-sand/60 flex flex-col sm:flex-row justify-between gap-4 text-xs text-mist">
+      <p>&copy; {year} Kamala Retreats. All rights reserved.</p>
+      <p class="wordmark text-[0.65rem] text-gold-600">Rise · Glow · Return</p>
+    </div>
+  </div>
+</footer>

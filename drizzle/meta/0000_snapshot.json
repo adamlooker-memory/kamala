@@ -1,0 +1,1507 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "bb60c88d-103b-4c70-83b9-d2f20b51b22c",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "add_ons": {
+      "name": "add_ons",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "retreat_id": {
+          "name": "retreat_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "unit_price_pence": {
+          "name": "unit_price_pence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "add_ons_retreat_code_uq": {
+          "name": "add_ons_retreat_code_uq",
+          "columns": [
+            "retreat_id",
+            "code"
+          ],
+          "isUnique": true
+        },
+        "add_ons_retreat_idx": {
+          "name": "add_ons_retreat_idx",
+          "columns": [
+            "retreat_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "add_ons_retreat_id_retreats_id_fk": {
+          "name": "add_ons_retreat_id_retreats_id_fk",
+          "tableFrom": "add_ons",
+          "tableTo": "retreats",
+          "columnsFrom": [
+            "retreat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "booking_holds": {
+      "name": "booking_holds",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "hold_token": {
+          "name": "hold_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "retreat_id": {
+          "name": "retreat_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "room_type_id": {
+          "name": "room_type_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occupancy": {
+          "name": "occupancy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email_hash": {
+          "name": "email_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "booking_holds_token_uq": {
+          "name": "booking_holds_token_uq",
+          "columns": [
+            "hold_token"
+          ],
+          "isUnique": true
+        },
+        "booking_holds_room_type_idx": {
+          "name": "booking_holds_room_type_idx",
+          "columns": [
+            "room_type_id"
+          ],
+          "isUnique": false
+        },
+        "booking_holds_expires_at_idx": {
+          "name": "booking_holds_expires_at_idx",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "booking_holds_retreat_id_retreats_id_fk": {
+          "name": "booking_holds_retreat_id_retreats_id_fk",
+          "tableFrom": "booking_holds",
+          "tableTo": "retreats",
+          "columnsFrom": [
+            "retreat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "booking_holds_room_type_id_room_types_id_fk": {
+          "name": "booking_holds_room_type_id_room_types_id_fk",
+          "tableFrom": "booking_holds",
+          "tableTo": "room_types",
+          "columnsFrom": [
+            "room_type_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "booking_lookup_attempts": {
+      "name": "booking_lookup_attempts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "email_hash": {
+          "name": "email_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "success": {
+          "name": "success",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "booking_lookup_attempts_email_hash_idx": {
+          "name": "booking_lookup_attempts_email_hash_idx",
+          "columns": [
+            "email_hash"
+          ],
+          "isUnique": false
+        },
+        "booking_lookup_attempts_ip_hash_idx": {
+          "name": "booking_lookup_attempts_ip_hash_idx",
+          "columns": [
+            "ip_hash"
+          ],
+          "isUnique": false
+        },
+        "booking_lookup_attempts_created_at_idx": {
+          "name": "booking_lookup_attempts_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "booking_lookup_tokens": {
+      "name": "booking_lookup_tokens",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "booking_id": {
+          "name": "booking_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requested_ip_hash": {
+          "name": "requested_ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "consumed_ip_hash": {
+          "name": "consumed_ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "booking_lookup_tokens_hash_uq": {
+          "name": "booking_lookup_tokens_hash_uq",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        },
+        "booking_lookup_tokens_booking_idx": {
+          "name": "booking_lookup_tokens_booking_idx",
+          "columns": [
+            "booking_id"
+          ],
+          "isUnique": false
+        },
+        "booking_lookup_tokens_expires_at_idx": {
+          "name": "booking_lookup_tokens_expires_at_idx",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "booking_lookup_tokens_booking_id_bookings_id_fk": {
+          "name": "booking_lookup_tokens_booking_id_bookings_id_fk",
+          "tableFrom": "booking_lookup_tokens",
+          "tableTo": "bookings",
+          "columnsFrom": [
+            "booking_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "bookings": {
+      "name": "bookings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "confirmation_code": {
+          "name": "confirmation_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "retreat_id": {
+          "name": "retreat_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "room_type_id": {
+          "name": "room_type_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occupancy": {
+          "name": "occupancy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "guest_count": {
+          "name": "guest_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lead_first_name": {
+          "name": "lead_first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lead_last_name": {
+          "name": "lead_last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lead_email": {
+          "name": "lead_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lead_phone": {
+          "name": "lead_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "guest2_first_name": {
+          "name": "guest2_first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "guest2_last_name": {
+          "name": "guest2_last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "guest2_email": {
+          "name": "guest2_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "dietary_lead": {
+          "name": "dietary_lead",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "dietary_guest2": {
+          "name": "dietary_guest2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "addons": {
+          "name": "addons",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(json_array())"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "subtotal_pence": {
+          "name": "subtotal_pence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "addons_total_pence": {
+          "name": "addons_total_pence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "total_pence": {
+          "name": "total_pence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'GBP'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "payment_provider": {
+          "name": "payment_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "payment_reference": {
+          "name": "payment_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "marketing_opt_in": {
+          "name": "marketing_opt_in",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "bookings_confirmation_code_uq": {
+          "name": "bookings_confirmation_code_uq",
+          "columns": [
+            "confirmation_code"
+          ],
+          "isUnique": true
+        },
+        "bookings_retreat_idx": {
+          "name": "bookings_retreat_idx",
+          "columns": [
+            "retreat_id"
+          ],
+          "isUnique": false
+        },
+        "bookings_room_type_idx": {
+          "name": "bookings_room_type_idx",
+          "columns": [
+            "room_type_id"
+          ],
+          "isUnique": false
+        },
+        "bookings_lead_email_idx": {
+          "name": "bookings_lead_email_idx",
+          "columns": [
+            "lead_email"
+          ],
+          "isUnique": false
+        },
+        "bookings_status_idx": {
+          "name": "bookings_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "bookings_retreat_id_retreats_id_fk": {
+          "name": "bookings_retreat_id_retreats_id_fk",
+          "tableFrom": "bookings",
+          "tableTo": "retreats",
+          "columnsFrom": [
+            "retreat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "bookings_room_type_id_room_types_id_fk": {
+          "name": "bookings_room_type_id_room_types_id_fk",
+          "tableFrom": "bookings",
+          "tableTo": "room_types",
+          "columnsFrom": [
+            "room_type_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "locations": {
+      "name": "locations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tbc_address": {
+          "name": "tbc_address",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "listing_url": {
+          "name": "listing_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lat": {
+          "name": "lat",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lng": {
+          "name": "lng",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "locations_slug_uq": {
+          "name": "locations_slug_uq",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "newsletter_subscribers": {
+      "name": "newsletter_subscribers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'other'"
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "unsubscribed_at": {
+          "name": "unsubscribed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "newsletter_email_uq": {
+          "name": "newsletter_email_uq",
+          "columns": [
+            "email"
+          ],
+          "isUnique": true
+        },
+        "newsletter_source_idx": {
+          "name": "newsletter_source_idx",
+          "columns": [
+            "source"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "practitioners": {
+      "name": "practitioners",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "discipline": {
+          "name": "discipline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "instagram_url": {
+          "name": "instagram_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "website_url": {
+          "name": "website_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_tbc": {
+          "name": "is_tbc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "practitioners_slug_uq": {
+          "name": "practitioners_slug_uq",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "retreat_practitioners": {
+      "name": "retreat_practitioners",
+      "columns": {
+        "retreat_id": {
+          "name": "retreat_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "practitioner_id": {
+          "name": "practitioner_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "retreat_practitioners_retreat_idx": {
+          "name": "retreat_practitioners_retreat_idx",
+          "columns": [
+            "retreat_id"
+          ],
+          "isUnique": false
+        },
+        "retreat_practitioners_practitioner_idx": {
+          "name": "retreat_practitioners_practitioner_idx",
+          "columns": [
+            "practitioner_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "retreat_practitioners_retreat_id_retreats_id_fk": {
+          "name": "retreat_practitioners_retreat_id_retreats_id_fk",
+          "tableFrom": "retreat_practitioners",
+          "tableTo": "retreats",
+          "columnsFrom": [
+            "retreat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "retreat_practitioners_practitioner_id_practitioners_id_fk": {
+          "name": "retreat_practitioners_practitioner_id_practitioners_id_fk",
+          "tableFrom": "retreat_practitioners",
+          "tableTo": "practitioners",
+          "columnsFrom": [
+            "practitioner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "retreat_practitioners_pk": {
+          "columns": [
+            "retreat_id",
+            "practitioner_id"
+          ],
+          "name": "retreat_practitioners_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "retreats": {
+      "name": "retreats",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tagline": {
+          "name": "tagline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'Europe/London'"
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'GBP'"
+        },
+        "is_published": {
+          "name": "is_published",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "is_sold_out": {
+          "name": "is_sold_out",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "retreats_slug_uq": {
+          "name": "retreats_slug_uq",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "retreats_starts_at_idx": {
+          "name": "retreats_starts_at_idx",
+          "columns": [
+            "starts_at"
+          ],
+          "isUnique": false
+        },
+        "retreats_location_id_idx": {
+          "name": "retreats_location_id_idx",
+          "columns": [
+            "location_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "retreats_location_id_locations_id_fk": {
+          "name": "retreats_location_id_locations_id_fk",
+          "tableFrom": "retreats",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "room_types": {
+      "name": "room_types",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "retreat_id": {
+          "name": "retreat_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "price_pair_pence": {
+          "name": "price_pair_pence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price_solo_pence": {
+          "name": "price_solo_pence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "inventory_total": {
+          "name": "inventory_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "room_types_retreat_code_uq": {
+          "name": "room_types_retreat_code_uq",
+          "columns": [
+            "retreat_id",
+            "code"
+          ],
+          "isUnique": true
+        },
+        "room_types_retreat_idx": {
+          "name": "room_types_retreat_idx",
+          "columns": [
+            "retreat_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "room_types_retreat_id_retreats_id_fk": {
+          "name": "room_types_retreat_id_retreats_id_fk",
+          "tableFrom": "room_types",
+          "tableTo": "retreats",
+          "columnsFrom": [
+            "retreat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "waitlist_entries": {
+      "name": "waitlist_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "retreat_id": {
+          "name": "retreat_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "room_type_id_pref": {
+          "name": "room_type_id_pref",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "occupancy_pref": {
+          "name": "occupancy_pref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notified_at": {
+          "name": "notified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "converted_booking_id": {
+          "name": "converted_booking_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "waitlist_retreat_email_uq": {
+          "name": "waitlist_retreat_email_uq",
+          "columns": [
+            "retreat_id",
+            "email"
+          ],
+          "isUnique": true
+        },
+        "waitlist_retreat_idx": {
+          "name": "waitlist_retreat_idx",
+          "columns": [
+            "retreat_id"
+          ],
+          "isUnique": false
+        },
+        "waitlist_email_idx": {
+          "name": "waitlist_email_idx",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "waitlist_entries_retreat_id_retreats_id_fk": {
+          "name": "waitlist_entries_retreat_id_retreats_id_fk",
+          "tableFrom": "waitlist_entries",
+          "tableTo": "retreats",
+          "columnsFrom": [
+            "retreat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "waitlist_entries_room_type_id_pref_room_types_id_fk": {
+          "name": "waitlist_entries_room_type_id_pref_room_types_id_fk",
+          "tableFrom": "waitlist_entries",
+          "tableTo": "room_types",
+          "columnsFrom": [
+            "room_type_id_pref"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "waitlist_entries_converted_booking_id_bookings_id_fk": {
+          "name": "waitlist_entries_converted_booking_id_bookings_id_fk",
+          "tableFrom": "waitlist_entries",
+          "tableTo": "bookings",
+          "columnsFrom": [
+            "converted_booking_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

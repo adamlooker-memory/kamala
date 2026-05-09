@@ -1,0 +1,732 @@
+---
+/**
+ * Multi-step booking form for a single retreat.
+ *
+ * Server-renders retreat data from D1; the client toggles between numbered
+ * sections, computes a live price summary, and POSTs the final payload to
+ * /api/booking/create. No SPA framework — vanilla TS in the page island.
+ */
+
+import { env } from 'cloudflare:workers';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getDb } from '../../db/client';
+import { getRetreatBySlug } from '../../lib/retreats-query';
+import { formatDateRange, formatPence } from '../../lib/format';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+if (!slug) return new Response('Not found', { status: 404 });
+
+const db = getDb(env);
+const detail = await getRetreatBySlug(db, slug);
+
+if (!detail) return new Response('Not found', { status: 404 });
+if (detail.retreat.is_sold_out) {
+  return Astro.redirect(`/retreats/${slug}#waitlist`, 302);
+}
+if (detail.retreat.ends_at.getTime() < Date.now()) {
+  return new Response('Retreat has ended', { status: 410 });
+}
+
+const massage = detail.add_ons.find((a) => a.code === 'in_room_massage') ?? null;
+const dateRange = formatDateRange(
+  detail.retreat.starts_at,
+  detail.retreat.ends_at,
+);
+
+// Bootstrap data for the client island.
+const clientData = {
+  slug,
+  rooms: detail.room_types.map((rt) => ({
+    id: rt.id,
+    code: rt.code,
+    name: rt.name,
+    description: rt.description,
+    price_pair_pence: rt.price_pair_pence,
+    price_solo_pence: rt.price_solo_pence,
+    inventory_total: rt.inventory_total,
+    remaining: rt.remaining,
+  })),
+  addons: {
+    massage: massage
+      ? {
+          id: massage.id,
+          name: massage.name,
+          unit_price_pence: massage.unit_price_pence,
+        }
+      : null,
+  },
+};
+const cancelled = Astro.url.searchParams.get('cancelled') === '1';
+---
+
+<BaseLayout title={`Book — ${detail.retreat.name}`}>
+  <section class="pt-10 lg:pt-16 pb-10">
+    <p class="eyebrow">Book your place</p>
+    <h1 class="font-light mt-3">{detail.retreat.name}</h1>
+    <p class="text-ink-soft mt-3">{dateRange} · {detail.location.name}</p>
+  </section>
+
+  {cancelled && (
+    <div class="mb-8 rounded-(--radius-card) border border-gold-300/60 bg-gold-50 px-5 py-4 text-sm text-ink-soft">
+      Your payment was cancelled. Nothing has been charged. You can resume below.
+    </div>
+  )}
+
+  <div
+    id="booking-app"
+    class="grid lg:grid-cols-12 gap-10 pb-32 lg:pb-24"
+    data-bootstrap={JSON.stringify(clientData)}
+  >
+    <!-- LEFT: STEPPER + FORM -->
+    <div class="lg:col-span-7 space-y-10">
+      <!-- Progress dots -->
+      <ol class="flex flex-wrap gap-3 items-center text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft">
+        {[
+          'Room',
+          'Occupancy',
+          'Guests',
+          'Add-ons',
+          'Contact',
+          'Review',
+          'Pay',
+        ].map((label, i) => (
+          <li data-step-dot={i + 1} class="flex items-center gap-2">
+            <span class="step-bullet inline-flex items-center justify-center w-6 h-6 rounded-(--radius-pill) border border-sand text-ink-soft">{i + 1}</span>
+            <span class="hidden sm:inline">{label}</span>
+            {i < 6 && <span class="text-mist">·</span>}
+          </li>
+        ))}
+      </ol>
+
+      <!-- Step 1: Room -->
+      <section data-step="1" class="space-y-5">
+        <header>
+          <p class="eyebrow">Step one</p>
+          <h2 class="mt-2">Choose your room.</h2>
+        </header>
+        <div class="space-y-3" id="room-list">
+          {detail.room_types.map((rt) => {
+            // Astro parser interprets `<` as a JSX tag opener inside arrow-fn bodies.
+            const soldOut = (rt.remaining ?? 0) === 0;
+            return (
+              <label class:list={[
+                'block rounded-(--radius-card) border p-5 cursor-pointer transition-colors',
+                soldOut
+                  ? 'border-sand/40 bg-cream-deep/30 opacity-60 cursor-not-allowed'
+                  : 'border-sand bg-cream-deep/60 hover:border-gold-400',
+              ]}>
+                <input
+                  type="radio"
+                  name="room_type_id"
+                  value={rt.id}
+                  disabled={soldOut}
+                  class="sr-only peer"
+                />
+                <div class="flex items-start justify-between gap-4">
+                  <div class="space-y-1">
+                    <h3 class="text-xl">{rt.name}</h3>
+                    {rt.description && <p class="text-sm text-ink-soft leading-relaxed">{rt.description}</p>}
+                    <p class="text-xs uppercase tracking-[0.18em] text-ink-soft pt-1">
+                      {soldOut
+                        ? 'Sold out'
+                        : `${rt.remaining} ${rt.remaining === 1 ? 'room' : 'rooms'} remaining`}
+                    </p>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="text-xs uppercase tracking-[0.18em] text-ink-soft">From</p>
+                    <p class="text-2xl font-display">{formatPence(Math.min(rt.price_pair_pence, rt.price_solo_pence))}</p>
+                  </div>
+                </div>
+                <span class="hidden peer-checked:inline-block mt-3 text-xs uppercase tracking-[0.18em] text-gold-700">Selected</span>
+              </label>
+            );
+          })}
+        </div>
+
+        <fieldset class="space-y-3 pt-4">
+          <legend class="eyebrow">Occupancy</legend>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block rounded-(--radius-card) border border-sand bg-cream-deep/60 p-4 cursor-pointer hover:border-gold-400">
+              <input type="radio" name="occupancy" value="pair" class="sr-only peer" checked />
+              <div class="flex items-baseline justify-between">
+                <span class="font-display text-lg">Pair</span>
+                <span class="text-xs uppercase tracking-[0.18em] text-ink-soft">two guests</span>
+              </div>
+              <p class="text-xs text-ink-soft mt-1">Bring someone — partner, sister, friend.</p>
+              <span class="hidden peer-checked:inline-block mt-2 text-xs uppercase tracking-[0.18em] text-gold-700">Selected</span>
+            </label>
+            <label class="block rounded-(--radius-card) border border-sand bg-cream-deep/60 p-4 cursor-pointer hover:border-gold-400">
+              <input type="radio" name="occupancy" value="solo" class="sr-only peer" />
+              <div class="flex items-baseline justify-between">
+                <span class="font-display text-lg">Solo</span>
+                <span class="text-xs uppercase tracking-[0.18em] text-ink-soft">one guest</span>
+              </div>
+              <p class="text-xs text-ink-soft mt-1">The room to yourself.</p>
+              <span class="hidden peer-checked:inline-block mt-2 text-xs uppercase tracking-[0.18em] text-gold-700">Selected</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <p class="step-error text-sm text-red-700 hidden" data-error-for="1"></p>
+        <div class="flex justify-end pt-2">
+          <button type="button" data-next class="px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Continue</button>
+        </div>
+      </section>
+
+      <!-- Step 2: Guests -->
+      <section data-step="2" class="space-y-5 hidden">
+        <header>
+          <p class="eyebrow">Step two</p>
+          <h2 class="mt-2">Who is travelling?</h2>
+        </header>
+
+        <div class="space-y-4">
+          <p class="eyebrow">Lead guest</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">First name</span>
+              <input type="text" name="lead.first_name" required class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+            </label>
+            <label class="block">
+              <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Last name</span>
+              <input type="text" name="lead.last_name" required class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+            </label>
+          </div>
+          <label class="block">
+            <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Dietary or accessibility notes (optional)</span>
+            <textarea name="lead.dietary.notes" rows="2" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500"></textarea>
+          </label>
+        </div>
+
+        <div data-guest2 class="space-y-4 pt-4 border-t border-sand/60">
+          <p class="eyebrow">Second guest</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">First name</span>
+              <input type="text" name="guest2.first_name" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+            </label>
+            <label class="block">
+              <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Last name</span>
+              <input type="text" name="guest2.last_name" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+            </label>
+          </div>
+          <label class="block">
+            <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Email (optional)</span>
+            <input type="email" name="guest2.email" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+          </label>
+          <label class="block">
+            <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Dietary or accessibility notes (optional)</span>
+            <textarea name="guest2.dietary.notes" rows="2" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500"></textarea>
+          </label>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-sand/60">
+          <p class="eyebrow">Emergency contact</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Name</span>
+              <input type="text" name="emergency_contact_name" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+            </label>
+            <label class="block">
+              <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Phone</span>
+              <input type="tel" name="emergency_contact_phone" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+            </label>
+          </div>
+        </div>
+
+        <p class="step-error text-sm text-red-700 hidden" data-error-for="2"></p>
+        <div class="flex justify-between pt-2">
+          <button type="button" data-prev class="px-6 py-3 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40">Back</button>
+          <button type="button" data-next class="px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Continue</button>
+        </div>
+      </section>
+
+      <!-- Step 3: Add-ons -->
+      <section data-step="3" class="space-y-5 hidden">
+        <header>
+          <p class="eyebrow">Step three</p>
+          <h2 class="mt-2">Optional add-ons.</h2>
+          <p class="text-ink-soft text-sm mt-2">Bookable now and only now — slots are limited.</p>
+        </header>
+
+        {massage ? (
+          <label class="block rounded-(--radius-card) border border-sand bg-cream-deep/60 p-5 cursor-pointer hover:border-gold-400">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex items-start gap-3">
+                <input type="checkbox" name="addon_massage" class="mt-1.5 accent-gold-600" />
+                <div>
+                  <p class="font-display text-lg">{massage.name}</p>
+                  {massage.description && <p class="text-sm text-ink-soft mt-1 leading-relaxed">{massage.description}</p>}
+                  <p class="text-xs text-ink-soft mt-2" data-addon-detail>
+                    {formatPence(massage.unit_price_pence)} per person
+                  </p>
+                </div>
+              </div>
+            </div>
+          </label>
+        ) : (
+          <p class="text-sm text-ink-soft">No optional add-ons available for this retreat.</p>
+        )}
+
+        <p class="step-error text-sm text-red-700 hidden" data-error-for="3"></p>
+        <div class="flex justify-between pt-2">
+          <button type="button" data-prev class="px-6 py-3 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40">Back</button>
+          <button type="button" data-next class="px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Continue</button>
+        </div>
+      </section>
+
+      <!-- Step 4: Contact -->
+      <section data-step="4" class="space-y-5 hidden">
+        <header>
+          <p class="eyebrow">Step four</p>
+          <h2 class="mt-2">How do we reach you?</h2>
+        </header>
+
+        <div class="space-y-4">
+          <label class="block">
+            <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Email</span>
+            <input type="email" name="lead.email" required autocomplete="email" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+          </label>
+          <label class="block">
+            <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">Phone (optional)</span>
+            <input type="tel" name="lead.phone" autocomplete="tel" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+          </label>
+          <label class="block">
+            <span class="block text-xs uppercase tracking-[0.18em] text-ink-soft mb-1">How did you hear about us? (optional)</span>
+            <input type="text" name="hear_about_us" class="w-full px-4 py-3 bg-cream-deep border border-sand rounded-(--radius-card) focus:outline-none focus:border-gold-500" />
+          </label>
+          <label class="flex items-start gap-3 text-sm text-ink-soft">
+            <input type="checkbox" name="marketing_opt_in" class="mt-1 accent-gold-600" />
+            <span>Send me a quiet letter once a month — new dates and reflections from Holly.</span>
+          </label>
+        </div>
+
+        <p class="step-error text-sm text-red-700 hidden" data-error-for="4"></p>
+        <div class="flex justify-between pt-2">
+          <button type="button" data-prev class="px-6 py-3 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40">Back</button>
+          <button type="button" data-next class="px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Continue</button>
+        </div>
+      </section>
+
+      <!-- Step 5: Review & terms -->
+      <section data-step="5" class="space-y-5 hidden">
+        <header>
+          <p class="eyebrow">Step five</p>
+          <h2 class="mt-2">A final look.</h2>
+        </header>
+        <div data-review class="rounded-(--radius-card) border border-sand bg-cream-deep/60 p-6 space-y-3 text-sm"></div>
+
+        <label class="flex items-start gap-3 text-sm">
+          <input type="checkbox" name="terms_accepted" required class="mt-1 accent-gold-600" />
+          <span class="text-ink-soft">
+            I understand bookings are <strong class="text-ink">binding and non-refundable</strong>. Full payment is taken at booking. If I am unable to attend, my place cannot be transferred to another retreat or refunded.
+          </span>
+        </label>
+
+        <p class="step-error text-sm text-red-700 hidden" data-error-for="5"></p>
+        <div class="flex justify-between pt-2">
+          <button type="button" data-prev class="px-6 py-3 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40">Back</button>
+          <button type="button" data-next class="px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Continue to pay</button>
+        </div>
+      </section>
+
+      <!-- Step 6: Pay -->
+      <section data-step="6" class="space-y-5 hidden">
+        <header>
+          <p class="eyebrow">Step six</p>
+          <h2 class="mt-2">Confirm and pay.</h2>
+          <p class="text-ink-soft text-sm mt-2">You'll be taken to a secure payment page.</p>
+        </header>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <button type="button" data-pay="stripe" class="px-6 py-4 rounded-(--radius-card) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Pay with card
+          </button>
+          <button type="button" data-pay="paypal" class="px-6 py-4 rounded-(--radius-card) border border-ink/20 text-xs uppercase tracking-[0.18em] hover:border-ink/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Pay with PayPal
+          </button>
+        </div>
+        <p class="step-error text-sm text-red-700 hidden" data-error-for="6"></p>
+        <div class="flex justify-start pt-2">
+          <button type="button" data-prev class="px-6 py-3 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40">Back</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: SUMMARY (sticky) -->
+    <aside class="hidden lg:block lg:col-span-5">
+      <div class="sticky top-24 rounded-(--radius-card) border border-sand bg-cream-deep/60 p-6 space-y-5">
+        <p class="eyebrow">Your booking</p>
+        <h3 class="text-xl">{detail.retreat.name}</h3>
+        <p class="text-sm text-ink-soft">{dateRange} · {detail.location.name}</p>
+        <hr />
+        <div data-summary class="space-y-3 text-sm text-ink-soft">
+          <p>Choose a room to begin.</p>
+        </div>
+        <hr />
+        <div class="flex items-baseline justify-between">
+          <span class="text-xs uppercase tracking-[0.18em] text-ink-soft">Total</span>
+          <span class="text-2xl font-display" data-total>£0</span>
+        </div>
+        <p class="text-xs text-ink-soft leading-relaxed">All amounts in GBP. Bookings are binding and non-refundable.</p>
+      </div>
+    </aside>
+
+    <!-- MOBILE: bottom bar -->
+    <div class="lg:hidden fixed bottom-0 inset-x-0 bg-cream border-t border-sand px-5 py-3 flex items-center justify-between gap-4 z-30">
+      <div>
+        <p class="text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft">Total</p>
+        <p class="text-lg font-display" data-total-mobile>£0</p>
+      </div>
+      <button type="button" data-mobile-next class="px-5 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em]">Continue</button>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  type Bootstrap = {
+    slug: string;
+    rooms: Array<{
+      id: number;
+      code: string;
+      name: string;
+      description: string | null;
+      price_pair_pence: number;
+      price_solo_pence: number;
+      inventory_total: number;
+      remaining: number;
+    }>;
+    addons: { massage: { id: number; name: string; unit_price_pence: number } | null };
+  };
+
+  function formatPence(pence: number): string {
+    if (!Number.isFinite(pence)) return '£0';
+    const pounds = pence / 100;
+    const isWhole = Math.abs(pounds - Math.round(pounds)) < 1e-9;
+    return isWhole
+      ? `£${Math.round(pounds).toLocaleString('en-GB')}`
+      : `£${pounds.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  const root = document.getElementById('booking-app') as HTMLElement | null;
+  if (root) {
+    const data: Bootstrap = JSON.parse(root.dataset.bootstrap ?? '{}');
+    const totalSteps = 6;
+    let step = 1;
+
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-step]'));
+    const dots = Array.from(root.querySelectorAll<HTMLElement>('[data-step-dot]'));
+    const summary = root.querySelector<HTMLElement>('[data-summary]');
+    const reviewBox = root.querySelector<HTMLElement>('[data-review]');
+    const totalEl = root.querySelector<HTMLElement>('[data-total]');
+    const totalMobileEl = root.querySelector<HTMLElement>('[data-total-mobile]');
+    const guest2Block = root.querySelector<HTMLElement>('[data-guest2]');
+    const addonDetail = root.querySelector<HTMLElement>('[data-addon-detail]');
+    const mobileNext = root.querySelector<HTMLButtonElement>('[data-mobile-next]');
+
+    function show(s: number) {
+      step = Math.max(1, Math.min(totalSteps, s));
+      sections.forEach((sec) => {
+        const n = Number(sec.dataset.step);
+        sec.classList.toggle('hidden', n !== step);
+      });
+      dots.forEach((d) => {
+        const n = Number(d.dataset.stepDot);
+        const bullet = d.querySelector<HTMLElement>('.step-bullet');
+        if (!bullet) return;
+        bullet.classList.toggle('bg-ink', n === step);
+        bullet.classList.toggle('text-cream', n === step);
+        bullet.classList.toggle('border-ink', n === step);
+        bullet.classList.toggle('text-gold-700', n < step);
+        bullet.classList.toggle('border-gold-400', n < step);
+      });
+      // Mobile next mirrors current step
+      if (mobileNext) mobileNext.textContent = step >= totalSteps ? 'Pay' : 'Continue';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function selectedRoomId(): number | null {
+      const r = root!.querySelector<HTMLInputElement>('input[name="room_type_id"]:checked');
+      return r ? Number(r.value) : null;
+    }
+    function selectedRoom() {
+      const id = selectedRoomId();
+      return data.rooms.find((r) => r.id === id) ?? null;
+    }
+    function selectedOccupancy(): 'pair' | 'solo' {
+      const r = root!.querySelector<HTMLInputElement>('input[name="occupancy"]:checked');
+      return (r?.value as 'pair' | 'solo') ?? 'pair';
+    }
+    function massageSelected(): boolean {
+      const r = root!.querySelector<HTMLInputElement>('input[name="addon_massage"]');
+      return !!(r && r.checked);
+    }
+    function val(name: string): string {
+      const el = root!.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`);
+      return el ? (el.value ?? '').trim() : '';
+    }
+    function checked(name: string): boolean {
+      const el = root!.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+      return !!(el && el.checked);
+    }
+
+    function priceBreakdown() {
+      const room = selectedRoom();
+      const occ = selectedOccupancy();
+      const guest_count = occ === 'pair' ? 2 : 1;
+      let subtotal = 0;
+      let addons = 0;
+      if (room) subtotal = occ === 'pair' ? room.price_pair_pence : room.price_solo_pence;
+      if (data.addons.massage && massageSelected()) {
+        addons = data.addons.massage.unit_price_pence * guest_count;
+      }
+      return { subtotal, addons, total: subtotal + addons, guest_count };
+    }
+
+    function setError(stepNum: number, msg: string | null) {
+      const el = root!.querySelector<HTMLElement>(`[data-error-for="${stepNum}"]`);
+      if (!el) return;
+      if (msg) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      } else {
+        el.textContent = '';
+        el.classList.add('hidden');
+      }
+    }
+
+    function validate(stepNum: number): boolean {
+      setError(stepNum, null);
+      if (stepNum === 1) {
+        if (!selectedRoom()) {
+          setError(1, 'Please choose a room to continue.');
+          return false;
+        }
+        return true;
+      }
+      if (stepNum === 2) {
+        if (!val('lead.first_name') || !val('lead.last_name')) {
+          setError(2, 'Please enter the lead guest name.');
+          return false;
+        }
+        if (selectedOccupancy() === 'pair') {
+          if (!val('guest2.first_name') || !val('guest2.last_name')) {
+            setError(2, 'Please enter the second guest name for a pair booking.');
+            return false;
+          }
+        }
+        return true;
+      }
+      if (stepNum === 4) {
+        const email = val('lead.email');
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setError(4, 'Please enter a valid email address.');
+          return false;
+        }
+        return true;
+      }
+      if (stepNum === 5) {
+        if (!checked('terms_accepted')) {
+          setError(5, 'Please confirm you have read the booking terms.');
+          return false;
+        }
+        return true;
+      }
+      return true;
+    }
+
+    function renderSummary() {
+      const room = selectedRoom();
+      const occ = selectedOccupancy();
+      const breakdown = priceBreakdown();
+      const lines: string[] = [];
+
+      if (room) {
+        const roomPrice = occ === 'pair' ? room.price_pair_pence : room.price_solo_pence;
+        lines.push(
+          `<div class="flex items-baseline justify-between gap-3"><span>${escapeHtml(room.name)} · ${occ === 'pair' ? 'pair' : 'solo'}</span><span>${formatPence(roomPrice)}</span></div>`,
+        );
+      } else {
+        lines.push('<p>Choose a room to begin.</p>');
+      }
+
+      if (data.addons.massage && massageSelected()) {
+        const qty = breakdown.guest_count;
+        lines.push(
+          `<div class="flex items-baseline justify-between gap-3"><span>${escapeHtml(data.addons.massage.name)} · ${qty} ${qty === 1 ? 'person' : 'people'}</span><span>${formatPence(data.addons.massage.unit_price_pence * qty)}</span></div>`,
+        );
+      }
+
+      if (summary) summary.innerHTML = lines.join('');
+      if (totalEl) totalEl.textContent = formatPence(breakdown.total);
+      if (totalMobileEl) totalMobileEl.textContent = formatPence(breakdown.total);
+
+      // Toggle guest 2 block + addon detail line.
+      if (guest2Block) {
+        guest2Block.classList.toggle('hidden', occ !== 'pair');
+      }
+      if (addonDetail && data.addons.massage) {
+        const qty = breakdown.guest_count;
+        addonDetail.textContent = `${formatPence(data.addons.massage.unit_price_pence)} per person · ${qty} ${qty === 1 ? 'person' : 'people'}`;
+      }
+    }
+
+    function renderReview() {
+      if (!reviewBox) return;
+      const room = selectedRoom();
+      const occ = selectedOccupancy();
+      const breakdown = priceBreakdown();
+      const lines: string[] = [];
+      if (room) {
+        lines.push(line('Room', `${room.name} · ${occ === 'pair' ? 'pair (2 guests)' : 'solo'}`));
+      }
+      lines.push(line('Lead guest', `${val('lead.first_name')} ${val('lead.last_name')}`.trim()));
+      if (occ === 'pair' && (val('guest2.first_name') || val('guest2.last_name'))) {
+        lines.push(line('Second guest', `${val('guest2.first_name')} ${val('guest2.last_name')}`.trim()));
+      }
+      lines.push(line('Email', val('lead.email')));
+      if (val('lead.phone')) lines.push(line('Phone', val('lead.phone')));
+      if (data.addons.massage && massageSelected()) {
+        lines.push(line('Add-on', `${data.addons.massage.name} (${breakdown.guest_count})`));
+      }
+      lines.push(`<div class="flex items-baseline justify-between pt-3 border-t border-sand text-base"><span>Total</span><span class="font-display text-xl">${formatPence(breakdown.total)}</span></div>`);
+      reviewBox.innerHTML = lines.join('');
+    }
+
+    function line(label: string, value: string): string {
+      return `<div class="flex items-baseline justify-between gap-3"><span class="text-ink-soft">${escapeHtml(label)}</span><span class="text-ink">${escapeHtml(value || '—')}</span></div>`;
+    }
+
+    function escapeHtml(s: string): string {
+      return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function gatherDietary(prefix: 'lead' | 'guest2') {
+      const notes = val(`${prefix}.dietary.notes`);
+      if (!notes) return undefined;
+      return { notes };
+    }
+
+    function buildPayload(provider: 'stripe' | 'paypal') {
+      const room = selectedRoom();
+      const occ = selectedOccupancy();
+      const breakdown = priceBreakdown();
+      return {
+        retreat_slug: data.slug,
+        room_type_id: room?.id,
+        occupancy: occ,
+        lead: {
+          first_name: val('lead.first_name'),
+          last_name: val('lead.last_name'),
+          email: val('lead.email'),
+          phone: val('lead.phone') || undefined,
+          dietary: gatherDietary('lead'),
+        },
+        guest2:
+          occ === 'pair'
+            ? {
+                first_name: val('guest2.first_name'),
+                last_name: val('guest2.last_name'),
+                email: val('guest2.email') || undefined,
+                dietary: gatherDietary('guest2'),
+              }
+            : undefined,
+        emergency_contact_name: val('emergency_contact_name') || undefined,
+        emergency_contact_phone: val('emergency_contact_phone') || undefined,
+        addon_massage: massageSelected(),
+        hear_about_us: val('hear_about_us') || undefined,
+        terms_accepted: checked('terms_accepted'),
+        marketing_opt_in: checked('marketing_opt_in'),
+        client_total_pence: breakdown.total,
+        provider,
+      };
+    }
+
+    async function submit(provider: 'stripe' | 'paypal') {
+      // Validate every step in order.
+      for (let s = 1; s <= 5; s++) {
+        if (!validate(s)) {
+          show(s);
+          return;
+        }
+      }
+      const payButtons = root!.querySelectorAll<HTMLButtonElement>('[data-pay]');
+      payButtons.forEach((b) => (b.disabled = true));
+      setError(6, null);
+
+      try {
+        const idem = (crypto as Crypto).randomUUID();
+        const res = await fetch('/api/booking/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idem,
+          },
+          body: JSON.stringify(buildPayload(provider)),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          checkoutUrl?: string;
+          error?: string;
+        };
+        if (!res.ok || !json.checkoutUrl) {
+          setError(6, json.error ?? 'Could not start payment, please try again in a moment.');
+          payButtons.forEach((b) => (b.disabled = false));
+          return;
+        }
+        window.location.href = json.checkoutUrl;
+      } catch (err) {
+        setError(6, 'A network problem stopped the booking, please try again.');
+        payButtons.forEach((b) => (b.disabled = false));
+      }
+    }
+
+    // Wire up buttons
+    root.addEventListener('click', (ev) => {
+      const target = ev.target as HTMLElement;
+      const next = target.closest<HTMLElement>('[data-next]');
+      const prev = target.closest<HTMLElement>('[data-prev]');
+      const pay = target.closest<HTMLElement>('[data-pay]');
+      if (next) {
+        if (validate(step)) show(step + 1);
+        return;
+      }
+      if (prev) {
+        show(step - 1);
+        return;
+      }
+      if (pay) {
+        const provider = pay.dataset.pay as 'stripe' | 'paypal';
+        submit(provider);
+        return;
+      }
+    });
+
+    if (mobileNext) {
+      mobileNext.addEventListener('click', () => {
+        if (step >= totalSteps) {
+          submit('stripe');
+        } else if (validate(step)) {
+          show(step + 1);
+        }
+      });
+    }
+
+    // Re-render on any change inside the form area.
+    root.addEventListener('change', () => {
+      renderSummary();
+      if (step === 5) renderReview();
+    });
+    root.addEventListener('input', () => {
+      if (step === 5) renderReview();
+    });
+
+    show(1);
+    renderSummary();
+  }
+</script>

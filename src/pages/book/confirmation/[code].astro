@@ -1,0 +1,151 @@
+---
+/**
+ * Booking confirmation page.
+ *
+ * Looks up a booking by `code`. Renders one of three states:
+ *   - paid / confirmed: success screen with code, what to expect, manage link.
+ *   - pending: holding screen with auto-poll while the webhook lands.
+ *   - cancelled / failed: graceful failure copy with how to retry.
+ */
+
+import { env } from 'cloudflare:workers';
+import { eq } from 'drizzle-orm';
+
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getDb } from '../../../db/client';
+import { bookings, locations, retreats } from '../../../db/schema';
+import { isValidBookingCode, normaliseBookingCode } from '../../../db/codes';
+import { formatDateRange, formatPence } from '../../../lib/format';
+
+export const prerender = false;
+
+const { code: rawCode } = Astro.params;
+if (!rawCode) return new Response('Not found', { status: 404 });
+
+const code = normaliseBookingCode(rawCode);
+if (!isValidBookingCode(code)) return new Response('Not found', { status: 404 });
+
+const db = getDb(env);
+const row = await db
+  .select({ booking: bookings, retreat: retreats, location: locations })
+  .from(bookings)
+  .innerJoin(retreats, eq(bookings.retreat_id, retreats.id))
+  .innerJoin(locations, eq(retreats.location_id, locations.id))
+  .where(eq(bookings.confirmation_code, code))
+  .limit(1);
+
+if (row.length === 0) return new Response('Not found', { status: 404 });
+
+const { booking, retreat, location } = row[0];
+const dateRange = formatDateRange(retreat.starts_at, retreat.ends_at);
+const isPaid = booking.payment_status === 'paid' || booking.status === 'confirmed';
+const isPending = !isPaid && booking.status === 'pending' && booking.payment_status === 'pending';
+const isCancelled = booking.status === 'cancelled';
+
+const manageHref = `/my-booking?email=${encodeURIComponent(booking.lead_email)}&code=${encodeURIComponent(code)}`;
+---
+
+<BaseLayout title={isPaid ? 'Booking confirmed' : 'Booking'}>
+  <section class="pt-12 lg:pt-20 pb-16 lg:pb-24 max-w-2xl mx-auto text-center space-y-8">
+    {isPaid && (
+      <>
+        <p class="eyebrow">Confirmed</p>
+        <h1 class="font-light">Your place is held.</h1>
+        <p class="text-ink-soft text-lg leading-relaxed">
+          We've sent a confirmation to <span class="text-ink">{booking.lead_email}</span>. Save your code somewhere safe.
+        </p>
+
+        <div class="rounded-(--radius-card) border border-sand bg-cream-deep/60 p-8 space-y-3">
+          <p class="text-xs uppercase tracking-[0.18em] text-ink-soft">Booking code</p>
+          <p class="font-mono text-3xl tracking-[0.18em]">{code}</p>
+        </div>
+
+        <div class="rounded-(--radius-card) border border-sand bg-cream-deep/60 p-6 text-left space-y-2 text-sm text-ink-soft">
+          <div class="flex items-baseline justify-between"><span>Retreat</span><span class="text-ink">{retreat.name}</span></div>
+          <div class="flex items-baseline justify-between"><span>Dates</span><span class="text-ink">{dateRange}</span></div>
+          <div class="flex items-baseline justify-between"><span>Location</span><span class="text-ink">{location.name}</span></div>
+          <div class="flex items-baseline justify-between"><span>Occupancy</span><span class="text-ink">{booking.occupancy === 'pair' ? 'Pair (2 guests)' : 'Solo'}</span></div>
+          <div class="flex items-baseline justify-between pt-2 border-t border-sand"><span>Paid</span><span class="text-ink font-display text-lg">{formatPence(booking.total_pence)}</span></div>
+        </div>
+
+        <div class="space-y-4 text-left text-ink-soft text-sm leading-relaxed">
+          <h2 class="text-2xl text-center">What happens next</h2>
+          <p>You'll receive a quiet welcome from Holly in the days ahead with a packing note, dietary check-in, and what to bring (almost nothing).</p>
+          <p>Seven days before the retreat we'll send a final reminder with arrival details and the address.</p>
+          <p>If anything changes — dietary needs, an emergency contact, the second guest's name — manage your booking with the link below.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-3 justify-center pt-4">
+          <a href={manageHref} class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Manage your booking</a>
+          <a href="/" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors">Back home</a>
+        </div>
+      </>
+    )}
+
+    {isPending && (
+      <>
+        <p class="eyebrow">Almost there</p>
+        <h1 class="font-light">We're confirming your payment.</h1>
+        <p class="text-ink-soft text-lg leading-relaxed">
+          This usually takes a moment. The page will refresh as soon as it's confirmed — please don't close this tab.
+        </p>
+        <div class="rounded-(--radius-card) border border-sand bg-cream-deep/60 p-8 space-y-3">
+          <p class="text-xs uppercase tracking-[0.18em] text-ink-soft">Booking code</p>
+          <p class="font-mono text-2xl tracking-[0.18em]">{code}</p>
+        </div>
+        <p class="text-xs text-ink-soft" data-poll-status>Checking…</p>
+        <script define:vars={{ code }}>
+          (async function poll() {
+            const start = Date.now();
+            const status = document.querySelector('[data-poll-status]');
+            const tick = async () => {
+              try {
+                const res = await fetch(`/api/booking/status?code=${encodeURIComponent(code)}`, { cache: 'no-store' });
+                const json = await res.json();
+                if (json && (json.payment_status === 'paid' || json.status === 'confirmed')) {
+                  window.location.reload();
+                  return;
+                }
+              } catch {
+                // ignore transient failures
+              }
+              if (Date.now() - start < 2 * 60 * 1000) {
+                if (status) status.textContent = 'Checking…';
+                setTimeout(tick, 3000);
+              } else {
+                if (status) status.textContent = "Still confirming. You can refresh manually if you'd like.";
+              }
+            };
+            setTimeout(tick, 2000);
+          })();
+        </script>
+      </>
+    )}
+
+    {isCancelled && (
+      <>
+        <p class="eyebrow">Booking cancelled</p>
+        <h1 class="font-light">This booking is no longer active.</h1>
+        <p class="text-ink-soft text-lg leading-relaxed">
+          If you'd like to try again, you can start a new booking below.
+        </p>
+        <div class="pt-4">
+          <a href={`/book/${retreat.slug}`} class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Begin a new booking</a>
+        </div>
+      </>
+    )}
+
+    {!isPaid && !isPending && !isCancelled && (
+      <>
+        <p class="eyebrow">Something didn't complete</p>
+        <h1 class="font-light">We couldn't confirm this booking.</h1>
+        <p class="text-ink-soft text-lg leading-relaxed">
+          Please try again. If the problem persists, write to us at hello@kamalaretreats.com with code <span class="font-mono">{code}</span>.
+        </p>
+        <div class="pt-4">
+          <a href={`/book/${retreat.slug}`} class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">Begin a new booking</a>
+        </div>
+      </>
+    )}
+  </section>
+</BaseLayout>

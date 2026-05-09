@@ -1,0 +1,133 @@
+---
+// Full GDPR-style cookie banner. Persists choice in localStorage under "kamala.consent".
+// Shape: { version, timestamp, essential: true, analytics: bool, marketing: bool }
+---
+
+<div
+  data-cookie-banner
+  class="fixed inset-x-0 bottom-0 z-50 hidden p-4 sm:p-6"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="cookie-banner-title"
+>
+  <div class="mx-auto max-w-(--container-page) bg-ink text-cream rounded-(--radius-card) shadow-(--shadow-soft) overflow-hidden">
+    <div data-cookie-view="default" class="p-6 sm:p-8 flex flex-col lg:flex-row gap-6 items-start lg:items-center">
+      <div class="flex-1 space-y-2">
+        <h3 id="cookie-banner-title" class="text-cream text-xl font-display">A little something about cookies</h3>
+        <p class="text-sm text-cream/80 leading-relaxed">
+          We use essential cookies to make this site work, and a few optional ones to understand how it&rsquo;s used and to remember you next time. You can choose what you&rsquo;re comfortable with.
+          <a href="/legal/privacy" class="underline underline-offset-2 hover:text-gold-200">Read our privacy policy</a>.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="px-4 py-2.5 text-xs uppercase tracking-[0.18em] rounded-(--radius-pill) border border-cream/40 hover:bg-cream/10 transition-colors" data-cookie-action="essential">Essential only</button>
+        <button type="button" class="px-4 py-2.5 text-xs uppercase tracking-[0.18em] rounded-(--radius-pill) border border-cream/40 hover:bg-cream/10 transition-colors" data-cookie-action="customise">Customise</button>
+        <button type="button" class="px-4 py-2.5 text-xs uppercase tracking-[0.18em] rounded-(--radius-pill) bg-gold-500 text-ink hover:bg-gold-400 transition-colors" data-cookie-action="accept-all">Accept all</button>
+      </div>
+    </div>
+
+    <div data-cookie-view="customise" class="hidden p-6 sm:p-8 space-y-6">
+      <div>
+        <h3 class="text-cream text-xl font-display mb-1">Choose what you&rsquo;re comfortable with</h3>
+        <p class="text-sm text-cream/70">Adjust each category below.</p>
+      </div>
+      <div class="space-y-4">
+        <label class="flex items-start gap-4 p-4 rounded-(--radius-card) border border-cream/15">
+          <input type="checkbox" checked disabled class="mt-1 accent-gold-500" />
+          <div class="flex-1 text-sm">
+            <span class="block text-cream font-medium mb-0.5">Essential</span>
+            <span class="text-cream/70">Required for the site to function — booking, security, your preferences.</span>
+          </div>
+        </label>
+        <label class="flex items-start gap-4 p-4 rounded-(--radius-card) border border-cream/15 cursor-pointer">
+          <input type="checkbox" name="analytics" class="mt-1 accent-gold-500" />
+          <div class="flex-1 text-sm">
+            <span class="block text-cream font-medium mb-0.5">Analytics</span>
+            <span class="text-cream/70">Anonymous traffic patterns so we can improve the site.</span>
+          </div>
+        </label>
+        <label class="flex items-start gap-4 p-4 rounded-(--radius-card) border border-cream/15 cursor-pointer">
+          <input type="checkbox" name="marketing" class="mt-1 accent-gold-500" />
+          <div class="flex-1 text-sm">
+            <span class="block text-cream font-medium mb-0.5">Marketing</span>
+            <span class="text-cream/70">Used only if we ever run ads — never to share your data with third parties beyond what&rsquo;s needed.</span>
+          </div>
+        </label>
+      </div>
+      <div class="flex flex-wrap gap-2 justify-end">
+        <button type="button" class="px-4 py-2.5 text-xs uppercase tracking-[0.18em] rounded-(--radius-pill) border border-cream/40 hover:bg-cream/10 transition-colors" data-cookie-action="back">Back</button>
+        <button type="button" class="px-4 py-2.5 text-xs uppercase tracking-[0.18em] rounded-(--radius-pill) bg-gold-500 text-ink hover:bg-gold-400 transition-colors" data-cookie-action="save">Save my choices</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const KEY = 'kamala.consent';
+  const VERSION = 1;
+
+  type Consent = {
+    version: number;
+    timestamp: number;
+    essential: true;
+    analytics: boolean;
+    marketing: boolean;
+  };
+
+  const banner = document.querySelector<HTMLElement>('[data-cookie-banner]');
+  const viewDefault = banner?.querySelector<HTMLElement>('[data-cookie-view="default"]');
+  const viewCustomise = banner?.querySelector<HTMLElement>('[data-cookie-view="customise"]');
+
+  function readConsent(): Consent | null {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Consent;
+      if (parsed.version !== VERSION) return null;
+      return parsed;
+    } catch { return null; }
+  }
+
+  function writeConsent(consent: Omit<Consent, 'version' | 'timestamp' | 'essential'>) {
+    const payload: Consent = {
+      version: VERSION,
+      timestamp: Date.now(),
+      essential: true,
+      ...consent,
+    };
+    localStorage.setItem(KEY, JSON.stringify(payload));
+    document.dispatchEvent(new CustomEvent('kamala:consent', { detail: payload }));
+  }
+
+  function show(view: 'default' | 'customise') {
+    if (!banner || !viewDefault || !viewCustomise) return;
+    banner.classList.remove('hidden');
+    viewDefault.classList.toggle('hidden', view !== 'default');
+    viewCustomise.classList.toggle('hidden', view !== 'customise');
+  }
+
+  function hide() { banner?.classList.add('hidden'); }
+
+  const existing = readConsent();
+  if (!existing) show('default');
+
+  banner?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const action = target.closest('[data-cookie-action]')?.getAttribute('data-cookie-action');
+    if (!action) return;
+
+    if (action === 'accept-all') { writeConsent({ analytics: true, marketing: true }); hide(); }
+    else if (action === 'essential') { writeConsent({ analytics: false, marketing: false }); hide(); }
+    else if (action === 'customise') { show('customise'); }
+    else if (action === 'back') { show('default'); }
+    else if (action === 'save') {
+      const analytics = (banner.querySelector<HTMLInputElement>('input[name="analytics"]'))?.checked ?? false;
+      const marketing = (banner.querySelector<HTMLInputElement>('input[name="marketing"]'))?.checked ?? false;
+      writeConsent({ analytics, marketing });
+      hide();
+    }
+  });
+
+  // Expose a tiny helper for opening preferences from a footer link later.
+  (window as unknown as { openCookiePreferences?: () => void }).openCookiePreferences = () => show('customise');
+</script>

@@ -1,0 +1,125 @@
+---
+/**
+ * Hard-coded weekend itinerary, sourced from /docs/brand-context.md.
+ * v1: identical across retreats. When the schema gains a per-retreat
+ * itinerary table, swap to a prop-driven version.
+ */
+
+const days = [
+  {
+    label: 'Friday',
+    eyebrow: 'Arrivals & opening',
+    highlights: [
+      'Welcome dinner, family-style',
+      'Cacao ceremony, breathwork & journaling',
+      'Lights down by 10pm',
+    ],
+    schedule: [
+      { time: '7:00pm', name: 'Arrival & check-in', body: 'Refreshments on arrival. Welcome pack and itinerary on the bed. Unpack at your own pace.' },
+      { time: '8:00pm', name: 'Welcome dinner', body: 'Family-sharing style, seasonal. First connection over food.' },
+      { time: '9:15pm', name: 'Cacao ceremony, breathwork & journaling', body: 'Candles, blankets, low light. Ceremonial-grade cacao. Gentle breathwork. Two journaling prompts. A quiet collective intention.' },
+      { time: '10:00pm', name: 'Lights down', body: 'Chamomile and valerian teas available.' },
+    ],
+  },
+  {
+    label: 'Saturday',
+    eyebrow: 'The heart of the retreat',
+    highlights: [
+      'Opening gong meditation (90 min)',
+      'Energy release workshop (2.5 hrs)',
+      'Reishi tea ceremony, breathwork & journaling',
+    ],
+    schedule: [
+      { time: 'From 8:30am', name: 'Wake naturally, drinks station open', body: 'Matcha, lions mane coffee, pressed juices, turmeric lattes, herbal teas, antioxidant shots, coconut water.' },
+      { time: '9:00am', name: 'Breakfast', body: 'Generous, relaxed, family-style.' },
+      { time: '10:00am', name: 'Welcome & weekend walkthrough', body: 'MC sets the tone, answers questions. (15 min.)' },
+      { time: '10:30am', name: 'Opening gong meditation (90 min)', body: 'Gentle movement, short breathwork, then lying down. Gongs, chimes, sacred sound, sage. No words.' },
+      { time: '12:30pm', name: 'Gentle transition & grazing table', body: '' },
+      { time: '1:30pm', name: 'Energy release workshop (2.5 hrs)', body: 'Somatic breathwork and guided movement. Deep emotional and physical release, held safely.' },
+      { time: '4:00pm', name: 'Free time (3 hrs)', body: 'Walk the grounds, fire pit, chess, nap, read, journal. Cinema room open with curated documentaries. Drinks station open.' },
+      { time: '7:00pm', name: 'Group dinner', body: 'Candlelit, family sharing, organic. Menu curated to the day’s activities.' },
+      { time: '8:30pm', name: 'Reishi tea ceremony, breathwork & journaling', body: 'Reishi tea (mushroom of calm). Short breathwork. Journaling prompts.' },
+      { time: '10:00pm', name: 'Lights down', body: 'Silence from this point.' },
+    ],
+  },
+  {
+    label: 'Sunday',
+    eyebrow: 'Slow, spacious, unhurried',
+    highlights: [
+      'Restorative morning yoga',
+      'Pool floating sound healing',
+      'Spa, massage & farewell lunch',
+    ],
+    schedule: [
+      { time: '8:00am', name: 'Morning yoga (optional but encouraged)', body: '60 min restorative.' },
+      { time: '9:00am', name: 'Breakfast', body: 'Last group breakfast.' },
+      { time: '10:00am', name: 'Pool floating sound healing', body: '12m warm indoor pool, sound healer performs while you float. Towels, robes, flotation aids provided. Spa complex exclusively the group’s.' },
+      { time: '11:30am', name: 'Free time, spa, massage & rest', body: 'Pool, jacuzzi, sauna, steam room until 2:30pm. Optional add-on massage delivered to your room.' },
+      { time: '1:00pm', name: 'Farewell grazing lunch', body: '' },
+      { time: '2:00pm', name: 'Farewell & take-home gifts', body: 'Each guest leaves with their journal, a KAMALA Reishi set, and a pressed juice for the journey.' },
+      { time: '3:00pm', name: 'Latest checkout', body: '' },
+    ],
+  },
+];
+---
+
+<!-- The weekend at a glance -->
+<section class="py-16 lg:py-24 border-t border-sand/60" id="at-a-glance">
+  <div class="space-y-3 max-w-2xl mb-10">
+    <p class="eyebrow">The weekend at a glance</p>
+    <h2>Three days, gently held.</h2>
+  </div>
+  <div class="grid lg:grid-cols-3 gap-6">
+    {days.map((day) => (
+      <article class="rounded-(--radius-card) bg-cream-deep/60 border border-sand/70 p-6 space-y-4">
+        <header class="space-y-1">
+          <p class="text-[0.65rem] uppercase tracking-[0.18em] text-gold-600">{day.eyebrow}</p>
+          <h3 class="text-2xl">{day.label}</h3>
+        </header>
+        <ul class="space-y-2 text-sm text-ink-soft">
+          {day.highlights.map((h) => (
+            <li class="flex gap-3 leading-relaxed">
+              <span class="text-gold-500 select-none" aria-hidden="true">·</span>
+              <span>{h}</span>
+            </li>
+          ))}
+        </ul>
+      </article>
+    ))}
+  </div>
+</section>
+
+<!-- Full itinerary -->
+<section class="py-16 lg:py-24 border-t border-sand/60" id="itinerary">
+  <div class="space-y-3 max-w-2xl mb-10">
+    <p class="eyebrow">The full itinerary</p>
+    <h2>Hour by hour, how the weekend lands.</h2>
+  </div>
+
+  <div class="space-y-4">
+    {days.map((day, i) => (
+      <details class="group rounded-(--radius-card) bg-cream-deep/40 border border-sand/70 overflow-hidden" open={i === 1}>
+        <summary class="cursor-pointer list-none px-6 py-5 flex items-center justify-between gap-4 hover:bg-cream-deep transition-colors">
+          <div class="flex items-baseline gap-4">
+            <span class="text-2xl font-display">{day.label}</span>
+            <span class="text-sm text-ink-soft">{day.eyebrow}</span>
+          </div>
+          <span class="text-gold-600 transition-transform group-open:rotate-45 select-none" aria-hidden="true">+</span>
+        </summary>
+        <div class="border-t border-sand/60 px-6 py-6">
+          <ol class="space-y-5">
+            {day.schedule.map((item) => (
+              <li class="grid grid-cols-[7rem_1fr] gap-4 items-baseline">
+                <span class="text-xs uppercase tracking-[0.18em] text-gold-700 whitespace-nowrap">{item.time}</span>
+                <div class="space-y-1">
+                  <p class="text-base text-ink">{item.name}</p>
+                  {item.body && <p class="text-sm text-ink-soft leading-relaxed">{item.body}</p>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </details>
+    ))}
+  </div>
+</section>

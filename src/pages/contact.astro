@@ -1,0 +1,135 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+---
+
+<BaseLayout
+  title="Contact"
+  description="Write to us. We read everything and reply personally."
+>
+  <section class="pt-12 lg:pt-20 pb-12 lg:pb-16 max-w-3xl">
+    <p class="eyebrow">Get in touch</p>
+    <h1 class="font-light mt-6">We read everything.<br /><em class="text-gold-600">We reply personally.</em></h1>
+    <p class="text-lg text-ink-soft mt-8 leading-relaxed max-w-xl">
+      If you have a question the FAQ didn't answer, or you want to talk through whether a weekend is right for you, write to us.
+    </p>
+  </section>
+
+  <section class="py-12 lg:py-16 border-t border-sand/60">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-16">
+      <div class="lg:col-span-5 space-y-10">
+        <div class="space-y-5 text-ink-soft text-lg leading-relaxed">
+          <p>
+            We're a small team. There's no inbox triage, no canned reply. Holly or someone close to her reads every message, and we'll come back to you within a few days.
+          </p>
+        </div>
+
+        <div class="space-y-6">
+          <p class="eyebrow">How to reach us</p>
+
+          <dl class="space-y-5">
+            <div>
+              <dt class="text-xs uppercase tracking-[0.18em] text-mist mb-1">Email</dt>
+              <dd class="text-lg">
+                <span class="inline-block align-baseline text-[0.65rem] uppercase tracking-[0.22em] text-gold-700/80 bg-gold-100/60 border border-gold-200/60 rounded-(--radius-pill) px-2 py-0.5 mr-2">TBC</span>
+                Contact email to be confirmed
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs uppercase tracking-[0.18em] text-mist mb-1">Instagram</dt>
+              <dd class="text-lg">
+                <span class="inline-block align-baseline text-[0.65rem] uppercase tracking-[0.22em] text-gold-700/80 bg-gold-100/60 border border-gold-200/60 rounded-(--radius-pill) px-2 py-0.5 mr-2">TBC</span>
+                Instagram handle to be confirmed
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="space-y-3 pt-4 border-t border-sand/60">
+          <p class="eyebrow">For press, partnerships and practitioners</p>
+          <p class="text-ink-soft leading-relaxed">
+            Same email is fine. Let us know in the subject line and we'll route it appropriately.
+          </p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <form
+          method="post"
+          action="/api/contact"
+          class="space-y-6 rounded-(--radius-card) bg-cream-deep border border-sand/70 p-8 lg:p-10"
+        >
+          <div class="space-y-2">
+            <p class="eyebrow">Send a note</p>
+            <h2 class="text-2xl">Tell us what's on your mind.</h2>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="contact-name" class="text-xs uppercase tracking-[0.18em] text-ink-soft">Your name</label>
+            <input
+              id="contact-name"
+              type="text"
+              name="name"
+              required
+              autocomplete="name"
+              placeholder="First and last"
+              class="w-full px-5 py-4 bg-cream border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500 transition-colors"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="contact-email" class="text-xs uppercase tracking-[0.18em] text-ink-soft">Email</label>
+            <input
+              id="contact-email"
+              type="email"
+              name="email"
+              required
+              autocomplete="email"
+              placeholder="your@email.com"
+              class="w-full px-5 py-4 bg-cream border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500 transition-colors"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="contact-message" class="text-xs uppercase tracking-[0.18em] text-ink-soft">Message</label>
+            <textarea
+              id="contact-message"
+              name="message"
+              required
+              rows="6"
+              placeholder="What's on your mind?"
+              class="w-full px-5 py-4 bg-cream border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500 transition-colors resize-y"
+            ></textarea>
+          </div>
+
+          {turnstileSiteKey ? (
+            <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light"></div>
+          ) : null}
+
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+            <p class="text-sm text-mist">We'll come back to you within a few days.</p>
+            <button
+              type="submit"
+              class="inline-flex items-center justify-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors"
+            >
+              Send
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <p class="text-center">
+      <a href="/philosophy" class="text-gold-600 underline underline-offset-4 decoration-1 hover:text-gold-700 text-sm uppercase tracking-[0.18em]">
+        Back to the philosophy
+      </a>
+    </p>
+  </section>
+
+  {turnstileSiteKey ? (
+    <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  ) : null}
+</BaseLayout>

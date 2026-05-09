@@ -1,0 +1,190 @@
+---
+/**
+ * Sticky search bar — location autocomplete + date range pill + guests pill.
+ * Pure DOM filtering: emits a custom event "kamala:search" on submit; the
+ * listing page subscribes and filters the inline data island.
+ *
+ * v1 shortcuts (documented for the team):
+ * - "Autocomplete" is plain substring matching against location names + regions.
+ * - Date range overlaps a retreat when [from..to] intersects [starts..ends].
+ */
+
+interface LocationSuggestion {
+  name: string;
+  region: string | null;
+}
+
+interface Props {
+  suggestions: LocationSuggestion[];
+}
+
+const { suggestions } = Astro.props;
+---
+
+<form
+  data-search-bar
+  class="search-bar bg-cream-deep/80 backdrop-blur-sm border border-sand rounded-(--radius-pill) p-1.5 flex flex-wrap items-stretch gap-1 shadow-(--shadow-soft)"
+  onsubmit="event.preventDefault();"
+>
+  <!-- Location -->
+  <div class="search-field relative flex-1 min-w-[180px] px-5 py-2 rounded-(--radius-pill) hover:bg-cream transition-colors">
+    <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-location">
+      Where
+    </label>
+    <input
+      id="search-location"
+      type="text"
+      name="location"
+      placeholder="Anywhere in the UK"
+      autocomplete="off"
+      data-search-location
+      class="w-full bg-transparent text-sm text-ink placeholder:text-mist focus:outline-none"
+    />
+    <ul
+      data-suggestions
+      class="absolute hidden left-0 top-full mt-2 z-30 w-full min-w-[260px] bg-cream border border-sand rounded-(--radius-card) shadow-(--shadow-soft) py-2 max-h-64 overflow-auto"
+      role="listbox"
+    >
+      {suggestions.map((s) => (
+        <li>
+          <button
+            type="button"
+            data-suggestion={s.name}
+            data-region={s.region ?? ''}
+            class="w-full text-left px-4 py-2 hover:bg-cream-deep text-sm text-ink"
+          >
+            {s.name}{s.region ? <span class="text-ink-soft">, {s.region}</span> : null}
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="hidden sm:block w-px self-stretch bg-sand/80"></div>
+
+  <!-- Dates -->
+  <div class="search-field flex items-center gap-3 px-5 py-2 rounded-(--radius-pill) hover:bg-cream transition-colors">
+    <div>
+      <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-from">
+        From
+      </label>
+      <input
+        id="search-from"
+        type="date"
+        name="from"
+        data-search-from
+        class="bg-transparent text-sm text-ink placeholder:text-mist focus:outline-none"
+      />
+    </div>
+    <span class="text-mist">→</span>
+    <div>
+      <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-to">
+        To
+      </label>
+      <input
+        id="search-to"
+        type="date"
+        name="to"
+        data-search-to
+        class="bg-transparent text-sm text-ink placeholder:text-mist focus:outline-none"
+      />
+    </div>
+  </div>
+
+  <div class="hidden sm:block w-px self-stretch bg-sand/80"></div>
+
+  <!-- Guests -->
+  <div class="search-field px-5 py-2 rounded-(--radius-pill) hover:bg-cream transition-colors">
+    <label class="block text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-0.5" for="search-guests">
+      Guests
+    </label>
+    <select
+      id="search-guests"
+      name="guests"
+      data-search-guests
+      class="bg-transparent text-sm text-ink focus:outline-none"
+    >
+      <option value="">Any</option>
+      <option value="1">1 (solo)</option>
+      <option value="2">2 (pair)</option>
+    </select>
+  </div>
+
+  <button
+    type="submit"
+    data-search-submit
+    class="ml-auto px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors"
+    aria-label="Search retreats"
+  >
+    Search
+  </button>
+</form>
+
+<script>
+  // --- Location suggestions ----------------------------------------------
+  const locationInput = document.querySelector<HTMLInputElement>('[data-search-location]');
+  const suggestionList = document.querySelector<HTMLUListElement>('[data-suggestions]');
+  const suggestionButtons = document.querySelectorAll<HTMLButtonElement>('[data-suggestion]');
+
+  function showSuggestions(filterTerm: string) {
+    if (!suggestionList) return;
+    const q = filterTerm.trim().toLowerCase();
+    let any = false;
+    suggestionButtons.forEach((btn) => {
+      const name = (btn.dataset.suggestion ?? '').toLowerCase();
+      const region = (btn.dataset.region ?? '').toLowerCase();
+      const match = q === '' || name.includes(q) || region.includes(q);
+      const li = btn.parentElement as HTMLElement | null;
+      if (li) li.style.display = match ? '' : 'none';
+      if (match) any = true;
+    });
+    suggestionList.classList.toggle('hidden', !any);
+  }
+
+  locationInput?.addEventListener('focus', () => showSuggestions(locationInput.value));
+  locationInput?.addEventListener('input', () => showSuggestions(locationInput!.value));
+  locationInput?.addEventListener('blur', () => {
+    // Delay so click on a suggestion still registers.
+    setTimeout(() => suggestionList?.classList.add('hidden'), 150);
+  });
+  suggestionButtons.forEach((btn) => {
+    btn.addEventListener('mousedown', (ev) => {
+      ev.preventDefault();
+      if (locationInput) locationInput.value = btn.dataset.suggestion ?? '';
+      suggestionList?.classList.add('hidden');
+      triggerSearch();
+    });
+  });
+
+  // --- Submit / change handlers -----------------------------------------
+  const fromInput = document.querySelector<HTMLInputElement>('[data-search-from]');
+  const toInput = document.querySelector<HTMLInputElement>('[data-search-to]');
+  const guestsSelect = document.querySelector<HTMLSelectElement>('[data-search-guests]');
+  const submitBtn = document.querySelector<HTMLButtonElement>('[data-search-submit]');
+  const form = document.querySelector<HTMLFormElement>('[data-search-bar]');
+
+  function triggerSearch() {
+    const detail = {
+      location: locationInput?.value ?? '',
+      from: fromInput?.value ?? '',
+      to: toInput?.value ?? '',
+      guests: guestsSelect?.value ?? '',
+    };
+    document.dispatchEvent(new CustomEvent('kamala:search', { detail }));
+  }
+
+  submitBtn?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    triggerSearch();
+  });
+  form?.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    triggerSearch();
+  });
+  [fromInput, toInput, guestsSelect].forEach((el) => {
+    el?.addEventListener('change', triggerSearch);
+  });
+
+  // Fire once on load so initial state is "all visible".
+  document.addEventListener('DOMContentLoaded', triggerSearch);
+</script>

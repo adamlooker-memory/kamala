@@ -1,0 +1,11 @@
+# Copy to .dev.vars (gitignored). Used by `wrangler dev` and the Astro Cloudflare adapter
+# in dev for `Astro.locals.runtime.env.*`. None of these are required to boot the dev server —
+# leave them blank until each integration is real.
+
+RESEND_API_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+PAYPAL_CLIENT_ID=
+PAYPAL_CLIENT_SECRET=
+BOOKING_TOKEN_SECRET=dev-only-do-not-use-in-prod
+TURNSTILE_SECRET_KEY=

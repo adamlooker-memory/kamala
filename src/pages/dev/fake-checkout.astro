@@ -1,0 +1,91 @@
+---
+/**
+ * Dev-only payment simulator.
+ *
+ * Renders only when running outside production. In real launch this URL
+ * 404s — providers will return their hosted Stripe / PayPal URLs instead.
+ */
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export const prerender = false;
+
+const isDev = import.meta.env.DEV === true || import.meta.env.MODE !== 'production';
+if (!isDev) return new Response('Not found', { status: 404 });
+
+const code = (Astro.url.searchParams.get('code') ?? '').toUpperCase().trim();
+const provider = Astro.url.searchParams.get('provider') ?? 'stripe';
+if (!code) return new Response('Missing code', { status: 400 });
+
+const providerLabel = provider === 'paypal' ? 'PayPal' : 'Stripe';
+---
+
+<BaseLayout title="Dev — payment simulator">
+  <section class="pt-16 lg:pt-24 pb-24 max-w-xl mx-auto text-center space-y-8">
+    <p class="eyebrow">Dev mode</p>
+    <h1 class="font-light">Payment simulator</h1>
+    <p class="text-ink-soft leading-relaxed">
+      In production this would redirect you to the {providerLabel} hosted checkout. While {providerLabel} is being wired in, you can simulate the result here.
+    </p>
+
+    <div class="rounded-(--radius-card) border border-sand bg-cream-deep/60 p-6 space-y-2 text-left text-sm">
+      <div class="flex items-baseline justify-between"><span class="text-ink-soft">Provider</span><span class="text-ink">{providerLabel}</span></div>
+      <div class="flex items-baseline justify-between"><span class="text-ink-soft">Booking code</span><span class="font-mono">{code}</span></div>
+    </div>
+
+    <div class="flex flex-wrap justify-center gap-3 pt-2">
+      <button
+        type="button"
+        id="dev-pay"
+        data-code={code}
+        class="px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Simulate success
+      </button>
+      <button
+        type="button"
+        id="dev-cancel"
+        data-code={code}
+        class="px-6 py-3.5 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors"
+      >
+        Cancel
+      </button>
+    </div>
+
+    <p class="text-xs text-ink-soft pt-4">This page exists only in development. It is not deployed to production.</p>
+  </section>
+</BaseLayout>
+
+<script>
+  const payBtn = document.getElementById('dev-pay') as HTMLButtonElement | null;
+  const cancelBtn = document.getElementById('dev-cancel') as HTMLButtonElement | null;
+
+  if (payBtn) {
+    payBtn.addEventListener('click', async () => {
+      const code = payBtn.dataset.code ?? '';
+      payBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/booking/dev/simulate-success?code=${encodeURIComponent(code)}`, {
+          method: 'POST',
+        });
+        if (res.ok) {
+          window.location.href = `/book/confirmation/${encodeURIComponent(code)}`;
+        } else {
+          payBtn.disabled = false;
+          payBtn.textContent = 'Try again';
+        }
+      } catch {
+        payBtn.disabled = false;
+        payBtn.textContent = 'Try again';
+      }
+    });
+  }
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      // Best effort: bounce back to the booking flow. We don't know the slug,
+      // so go to the retreats list — the booking page sets `?cancelled=1` if
+      // we ever route back there.
+      window.location.href = '/retreats';
+    });
+  }
+</script>

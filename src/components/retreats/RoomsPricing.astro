@@ -1,0 +1,94 @@
+---
+import { formatPence } from '../../lib/format';
+import type { RoomTypeWithInventory } from '../../lib/retreats-query';
+import type { AddOn } from '../../db/schema';
+
+interface Props {
+  retreatSlug: string;
+  rooms: RoomTypeWithInventory[];
+  addOns: AddOn[];
+}
+
+const { retreatSlug, rooms, addOns } = Astro.props;
+const massage = addOns.find((a) => a.code === 'in_room_massage');
+---
+
+<section class="py-16 lg:py-24 border-t border-sand/60" id="rooms">
+  <div class="space-y-3 max-w-2xl mb-10">
+    <p class="eyebrow">Rooms & pricing</p>
+    <h2>Two guests sharing, or one in solo comfort.</h2>
+    <p class="text-ink-soft text-sm leading-relaxed">All rates include the full programme, all meals, all rituals, and the drinks station throughout.</p>
+  </div>
+
+  <div class="space-y-4">
+    {rooms.map((room) => {
+      const soldOut = (room.remaining ?? 0) === 0;
+      return (
+        <article class:list={[
+          'rounded-(--radius-card) border border-sand/70 p-6 lg:p-8 grid lg:grid-cols-12 gap-6',
+          soldOut ? 'bg-cream-deep/30 opacity-70' : 'bg-cream-deep/60',
+        ]}>
+          <div class="lg:col-span-6 space-y-2">
+            <div class="flex items-center gap-3">
+              <h3 class="text-2xl">{room.name}</h3>
+              {room.code !== 'standard' && (
+                <span class="text-[0.65rem] uppercase tracking-[0.18em] px-2 py-1 bg-gold-100 text-gold-700 rounded-(--radius-pill)">
+                  En suite
+                </span>
+              )}
+            </div>
+            {room.description && <p class="text-sm text-ink-soft leading-relaxed">{room.description}</p>}
+            <p class="text-xs uppercase tracking-[0.18em] text-ink-soft pt-2">
+              {soldOut
+                ? 'Sold out — join the waitlist'
+                : `${room.remaining} ${room.remaining === 1 ? 'room' : 'rooms'} remaining`}
+            </p>
+          </div>
+
+          <div class="lg:col-span-4 grid grid-cols-2 gap-4 self-center">
+            <div>
+              <p class="text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-1">Pair</p>
+              <p class="text-2xl font-display text-ink">{formatPence(room.price_pair_pence)}</p>
+              <p class="text-xs text-ink-soft">two guests</p>
+            </div>
+            <div>
+              <p class="text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft mb-1">Solo</p>
+              <p class="text-2xl font-display text-ink">{formatPence(room.price_solo_pence)}</p>
+              <p class="text-xs text-ink-soft">one guest</p>
+            </div>
+          </div>
+
+          <div class="lg:col-span-2 self-center justify-self-start lg:justify-self-end">
+            {soldOut ? (
+              <a
+                href={`#waitlist`}
+                class="inline-flex items-center px-5 py-3 rounded-(--radius-pill) border border-ink/20 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors"
+              >
+                Join waitlist
+              </a>
+            ) : (
+              <a
+                href={`/book/${retreatSlug}?room=${room.code}`}
+                class="inline-flex items-center px-5 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors"
+              >
+                Reserve
+              </a>
+            )}
+          </div>
+        </article>
+      );
+    })}
+  </div>
+
+  {massage && (
+    <div class="mt-6 p-5 rounded-(--radius-card) bg-gold-50 border border-gold-100 flex items-baseline justify-between gap-6">
+      <div>
+        <p class="text-base text-ink">{massage.name}</p>
+        {massage.description && <p class="text-sm text-ink-soft">{massage.description}</p>}
+      </div>
+      <p class="text-base font-display text-ink whitespace-nowrap">
+        {formatPence(massage.unit_price_pence)} <span class="text-xs text-ink-soft">per person</span>
+      </p>
+    </div>
+  )}
+</section>

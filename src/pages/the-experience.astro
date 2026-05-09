@@ -1,0 +1,145 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Placeholder from '../components/Placeholder.astro';
+
+const days = [
+  {
+    eyebrow: 'Day one — Arrival',
+    day: 'Friday',
+    title: 'Arrival and softening.',
+    body: [
+      'You arrive at seven. The drive in is quiet, lined with trees. Someone meets you at the door with something warm to drink. Your room is ready. Nobody is rushing you.',
+      'At eight, we eat together. Family-style, around one long table. The conversation finds its own level.',
+      'After dinner, we gather by candlelight for cacao. Ceremonial-grade, warm, slightly bitter. There\'s gentle breathwork, and a journal in your hands with two questions.',
+    ],
+    pull: '“What do I want to leave behind this weekend? What do I want to take home?”',
+    closing: 'You write what comes. We close with a quiet collective intention. Lights down by ten.',
+    image: 'Candlelight · cacao circle',
+    ratio: '4/5' as const,
+    align: 'right' as const,
+  },
+  {
+    eyebrow: 'Day two — Release',
+    day: 'Saturday',
+    title: 'Where the work tends to live.',
+    body: [
+      'You wake when you wake. The drinks station is open from early. Breakfast at nine, generous and unhurried.',
+      'At half past ten, the gong meditation begins. Ninety minutes of gentle movement, short breathwork, then lying down under blankets while sacred sound moves through the room. There are no words.',
+      'Then comes the heart of the weekend. Two and a half hours of somatic breathwork and guided movement. It\'s deep, it can be intense, and it\'s held safely. What surfaces, surfaces. What needs to move, moves.',
+      'The afternoon is yours. Walk the grounds. Sit by the fire pit. Sleep. Read. The cinema room is open. Dinner at seven, candlelit, the menu shaped by what the day asked for.',
+    ],
+    pull: '“What shifted today? What surprised me? What feels different in my body from yesterday?”',
+    closing: 'We close with reishi tea, breath, and the journal again. From here on, silence.',
+    image: 'Gong meditation · sacred sound',
+    ratio: '3/4' as const,
+    align: 'left' as const,
+  },
+  {
+    eyebrow: 'Day three — Return',
+    day: 'Sunday',
+    title: 'Float, and home slowly.',
+    body: [
+      'Yoga at eight, optional but worth attending. Sixty minutes of restorative shapes, just enough to wake the body without asking too much. Breakfast at nine. The last meal as a full group.',
+      'At ten, we move to the pool. Twelve metres of warm indoor water, the spa held for the group only. You float &mdash; towels, robes, flotation aids all provided &mdash; while a sound healer works at the water\'s edge. Bowls, voice, breath. The water carries you.',
+      'After, the spa is open until half past two. Pool, jacuzzi, sauna, steam. If you booked the in-room massage, it comes to you.',
+    ],
+    pull: 'Most people don\'t want to leave.',
+    closing: 'At two we close. Each guest leaves with their journal, a Kamala reishi set, and a pressed juice for the road. You drive back into your life slower than you arrived.',
+    image: 'Pool · floating sound healing',
+    ratio: '4/5' as const,
+    align: 'right' as const,
+  },
+];
+---
+
+<BaseLayout
+  title="The Experience"
+  description="A Kamala weekend, hour by hour. Friday softens you. Saturday opens you. Sunday returns you."
+>
+  <section class="pt-12 lg:pt-20 pb-16 lg:pb-24 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-7 space-y-8">
+      <p class="eyebrow">A Kamala weekend</p>
+      <h1 class="font-light">Three days. Held carefully.<br /><em class="text-gold-600">Slower than you expect.</em></h1>
+      <p class="text-lg text-ink-soft max-w-xl leading-relaxed">
+        Every Kamala retreat follows the same arc, even as the venues and practitioners change. Friday softens you. Saturday opens you. Sunday returns you, gently, to the world.
+      </p>
+      <p class="text-base text-ink-soft max-w-xl leading-relaxed">
+        What follows is the rhythm of a typical weekend. The detailed schedule for any given retreat lives on its own page.
+      </p>
+    </div>
+    <div class="lg:col-span-5">
+      <Placeholder ratio="4/5" label="Estate · candlelit dinner" />
+    </div>
+  </section>
+
+  <section class="py-12 lg:py-16 border-t border-sand/60">
+    <ol class="relative space-y-24 lg:space-y-32" aria-label="The three days">
+      <div class="hidden lg:block absolute left-1/2 top-0 bottom-0 w-px bg-sand/60 -translate-x-1/2" aria-hidden="true"></div>
+
+      {days.map((d, i) => (
+        <li class="relative grid lg:grid-cols-12 gap-10 items-center">
+          <span
+            class="hidden lg:flex absolute left-1/2 -translate-x-1/2 top-8 w-8 h-8 rounded-full bg-cream border border-gold-500/60 items-center justify-center text-xs text-gold-700 font-medium"
+            aria-hidden="true"
+          >{i + 1}</span>
+
+          {d.align === 'right' ? (
+            <>
+              <div class="lg:col-span-6 lg:pr-10 space-y-6">
+                <div class="space-y-2">
+                  <p class="eyebrow">{d.eyebrow}</p>
+                  <h2 class="mt-2">{d.title}</h2>
+                  <p class="wordmark text-xs text-mist mt-3">{d.day}</p>
+                </div>
+                <div class="space-y-5 text-ink-soft text-lg leading-relaxed">
+                  {d.body.map(p => <p set:html={p} />)}
+                </div>
+                <blockquote class="border-l-2 border-gold-500 pl-5 py-1 font-display italic text-xl lg:text-2xl text-ink leading-snug">
+                  {d.pull}
+                </blockquote>
+                <p class="text-ink-soft leading-relaxed">{d.closing}</p>
+              </div>
+              <div class="lg:col-span-6 lg:pl-10">
+                <Placeholder ratio={d.ratio} label={d.image} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div class="lg:col-span-6 lg:pr-10 lg:order-1 order-2">
+                <Placeholder ratio={d.ratio} label={d.image} />
+              </div>
+              <div class="lg:col-span-6 lg:pl-10 lg:order-2 order-1 space-y-6">
+                <div class="space-y-2">
+                  <p class="eyebrow">{d.eyebrow}</p>
+                  <h2 class="mt-2">{d.title}</h2>
+                  <p class="wordmark text-xs text-mist mt-3">{d.day}</p>
+                </div>
+                <div class="space-y-5 text-ink-soft text-lg leading-relaxed">
+                  {d.body.map(p => <p set:html={p} />)}
+                </div>
+                <blockquote class="border-l-2 border-gold-500 pl-5 py-1 font-display italic text-xl lg:text-2xl text-ink leading-snug">
+                  {d.pull}
+                </blockquote>
+                <p class="text-ink-soft leading-relaxed">{d.closing}</p>
+              </div>
+            </>
+          )}
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="py-16 lg:py-24 border-t border-sand/60">
+    <div class="rounded-(--radius-card) bg-cream-deep border border-sand/70 px-8 py-14 lg:px-16 lg:py-20 text-center space-y-6">
+      <p class="eyebrow">Ready for the detail?</p>
+      <h2 class="max-w-2xl mx-auto">The October retreat, hour by hour.</h2>
+      <p class="text-ink-soft leading-relaxed max-w-xl mx-auto">
+        Each retreat has its own page with the full timetable, venue, practitioners and rooms.
+      </p>
+      <div class="flex flex-wrap justify-center gap-3 pt-4">
+        <a href="/retreats/october-2026" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors">See the October retreat</a>
+        <a href="/practitioners" class="inline-flex items-center px-6 py-3.5 rounded-(--radius-pill) border border-ink/15 text-xs uppercase tracking-[0.18em] hover:border-ink/40 transition-colors">Meet the practitioners</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,123 @@
+---
+/**
+ * Inline waitlist signup. Posts JSON to /api/waitlist.
+ * - When `retreatId` is provided, the form pins to that retreat.
+ * - Otherwise it shows a "Tell us where you'd like us next" capture.
+ */
+
+interface Props {
+  retreatId?: number | null;
+  /** When omitted, the API will accept the entry without a retreat (validates within API). */
+  variant?: 'inline' | 'card';
+  title?: string;
+  copy?: string;
+}
+
+const {
+  retreatId = null,
+  variant = 'card',
+  title = 'Join the waitlist',
+  copy = 'New rooms occasionally open up. Drop your email and we will write to you first.',
+} = Astro.props;
+
+const formId = `waitlist-form-${retreatId ?? 'general'}`;
+---
+
+<div class:list={[
+  variant === 'card'
+    ? 'rounded-(--radius-card) bg-cream-deep border border-sand/70 p-6 lg:p-8 space-y-4'
+    : 'space-y-4',
+]}>
+  <div class="space-y-2">
+    <p class="eyebrow">Stay in the loop</p>
+    <h3 class="text-2xl">{title}</h3>
+    <p class="text-sm text-ink-soft leading-relaxed">{copy}</p>
+  </div>
+
+  <form id={formId} data-waitlist-form class="space-y-3" novalidate>
+    {retreatId !== null && (
+      <input type="hidden" name="retreat_id" value={String(retreatId)} />
+    )}
+    <div class="grid sm:grid-cols-2 gap-3">
+      <input
+        type="email"
+        name="email"
+        required
+        autocomplete="email"
+        placeholder="your@email.com"
+        class="px-4 py-3 bg-cream border border-sand rounded-(--radius-card) placeholder:text-mist focus:outline-none focus:border-gold-500 text-sm"
+      />
+      <select
+        name="occupancy_pref"
+        class="px-4 py-3 bg-cream border border-sand rounded-(--radius-card) text-sm focus:outline-none focus:border-gold-500"
+      >
+        <option value="">Either solo or pair</option>
+        <option value="pair">Pair</option>
+        <option value="solo">Solo</option>
+      </select>
+    </div>
+    <button
+      type="submit"
+      class="inline-flex items-center px-6 py-3 rounded-(--radius-pill) bg-ink text-cream text-xs uppercase tracking-[0.18em] hover:bg-gold-700 transition-colors disabled:opacity-50"
+    >
+      <span data-waitlist-label>Add me to the list</span>
+    </button>
+    <p data-waitlist-status class="text-sm text-ink-soft min-h-[1.25rem]" aria-live="polite"></p>
+  </form>
+</div>
+
+<script define:vars={{ formId }}>
+  const form = document.getElementById(formId);
+  if (form) {
+    const status = form.querySelector('[data-waitlist-status]');
+    const label = form.querySelector('[data-waitlist-label]');
+    const button = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const data = new FormData(form);
+      const payload = {
+        email: String(data.get('email') ?? '').trim(),
+        retreat_id: data.get('retreat_id') ? Number(data.get('retreat_id')) : undefined,
+        occupancy_pref: data.get('occupancy_pref') || undefined,
+        source: 'waitlist',
+      };
+
+      if (!payload.email) {
+        if (status) status.textContent = 'Please enter your email.';
+        return;
+      }
+
+      if (button) button.setAttribute('disabled', 'true');
+      if (label) label.textContent = 'Adding…';
+      if (status) status.textContent = '';
+
+      try {
+        const res = await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          if (status)
+            status.textContent = json.already
+              ? "You're already on the list — we'll be in touch."
+              : "You're on the list. Thank you.";
+          form.reset();
+        } else if (res.status === 429) {
+          if (status) status.textContent = 'Too many requests. Try again in a few minutes.';
+        } else if (res.status === 400) {
+          if (status) status.textContent = json.error ?? 'Please check your details and try again.';
+        } else {
+          if (status) status.textContent = 'Something went wrong. Please try again.';
+        }
+      } catch {
+        if (status) status.textContent = 'Network error. Please try again.';
+      } finally {
+        if (button) button.removeAttribute('disabled');
+        if (label) label.textContent = 'Add me to the list';
+      }
+    });
+  }
+</script>

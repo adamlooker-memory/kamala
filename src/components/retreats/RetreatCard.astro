@@ -1,0 +1,96 @@
+---
+import Placeholder from '../Placeholder.astro';
+import { formatDateRange, formatPence } from '../../lib/format';
+
+interface Props {
+  slug: string;
+  name: string;
+  tagline?: string | null;
+  locationName: string;
+  region?: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  leadPricePence: number | null;
+  roomsRemaining: number;
+  isSoldOut: boolean;
+  /** Comma-separated tokens used by the client-side filter. */
+  searchTokens: string;
+  /** ISO yyyy-mm-dd for filter overlap math. */
+  startISO: string;
+  endISO: string;
+  lat?: number | null;
+  lng?: number | null;
+}
+
+const {
+  slug,
+  name,
+  tagline,
+  locationName,
+  region,
+  startsAt,
+  endsAt,
+  leadPricePence,
+  roomsRemaining,
+  isSoldOut,
+  searchTokens,
+  startISO,
+  endISO,
+  lat,
+  lng,
+} = Astro.props;
+
+const dateLabel = formatDateRange(startsAt, endsAt);
+const priceLabel = leadPricePence !== null ? `from ${formatPence(leadPricePence)}` : null;
+---
+
+<article
+  class="retreat-card group rounded-(--radius-card) overflow-hidden bg-cream-deep/40 border border-sand/70 hover:shadow-(--shadow-soft) transition-shadow"
+  data-retreat-card
+  data-slug={slug}
+  data-search={searchTokens}
+  data-start={startISO}
+  data-end={endISO}
+  data-lat={lat ?? ''}
+  data-lng={lng ?? ''}
+>
+  <a href={`/retreats/${slug}`} class="block">
+    <div class="relative">
+      <Placeholder ratio="3/2" label={`${locationName}`} />
+      {isSoldOut ? (
+        <span class="absolute top-4 left-4 px-3 py-1 rounded-(--radius-pill) bg-ink/85 text-cream text-[0.65rem] uppercase tracking-[0.18em]">
+          Sold out
+        </span>
+      ) : roomsRemaining > 0 && roomsRemaining < 4 ? (
+        <span class="absolute top-4 left-4 px-3 py-1 rounded-(--radius-pill) bg-gold-500/95 text-cream text-[0.65rem] uppercase tracking-[0.18em]">
+          {roomsRemaining} {roomsRemaining === 1 ? 'room' : 'rooms'} left
+        </span>
+      ) : null}
+    </div>
+    <div class="p-5 space-y-3">
+      <div class="flex items-baseline justify-between gap-3">
+        <p class="text-xs uppercase tracking-[0.18em] text-ink-soft">
+          {locationName}{region ? `, ${region}` : ''}
+        </p>
+        <p class="text-xs text-ink-soft whitespace-nowrap">{dateLabel}</p>
+      </div>
+      <h3 class="text-2xl leading-tight">{name}</h3>
+      {tagline ? <p class="text-sm text-ink-soft leading-relaxed">{tagline}</p> : null}
+      <div class="flex items-center justify-between pt-3 border-t border-sand/60">
+        <p class="text-sm text-ink">
+          {priceLabel ? (
+            <Fragment>
+              <span class="text-ink-soft">{priceLabel.split(' ')[0]} </span>
+              <strong class="font-medium">{priceLabel.split(' ').slice(1).join(' ')}</strong>
+            </Fragment>
+          ) : (
+            <span class="text-ink-soft">Pricing coming soon</span>
+          )}
+        </p>
+        <span class="inline-flex items-center px-4 py-2 rounded-(--radius-pill) bg-ink text-cream text-[0.7rem] uppercase tracking-[0.18em] group-hover:bg-gold-700 transition-colors">
+          {isSoldOut ? 'Waitlist' : 'View retreat'}
+        </span>
+      </div>
+    </div>
+  </a>
+</article>

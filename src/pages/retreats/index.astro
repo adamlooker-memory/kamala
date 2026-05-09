@@ -1,0 +1,223 @@
+---
+import { env } from 'cloudflare:workers';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SearchBar from '../../components/retreats/SearchBar.astro';
+import RetreatCard from '../../components/retreats/RetreatCard.astro';
+import RetreatsMap from '../../components/retreats/RetreatsMap.astro';
+import WaitlistForm from '../../components/retreats/WaitlistForm.astro';
+import { getDb } from '../../db/client';
+import { listPublicRetreats } from '../../lib/retreats-query';
+import { toDateInputValue } from '../../lib/format';
+
+let items: Awaited<ReturnType<typeof listPublicRetreats>> = [];
+if (env?.DB) {
+  const db = getDb(env);
+  try {
+    items = await listPublicRetreats(db);
+  } catch (err) {
+    // Surface gracefully — never crash the page on data layer issues.
+    console.error('listPublicRetreats failed', err);
+    items = [];
+  }
+}
+
+// Build a unique location-suggestion list for the search bar autocomplete.
+const seen = new Set<string>();
+const suggestions = items
+  .map((it) => ({ name: it.location.name, region: it.location.region ?? null }))
+  .filter((s) => {
+    const key = `${s.name}|${s.region ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+// Static prefix for server-rendered date attributes.
+function fmtToken(it: (typeof items)[number]): string {
+  return [
+    it.location.name,
+    it.location.region ?? '',
+    it.location.country ?? '',
+    it.retreat.name,
+    it.retreat.tagline ?? '',
+  ]
+    .join(' ')
+    .toLowerCase();
+}
+---
+
+<BaseLayout
+  title="Retreats"
+  description="Browse upcoming Kamala retreats. Private estates, small cohorts, the full programme."
+>
+  <section class="pt-10 lg:pt-16 pb-10 space-y-6">
+    <div class="space-y-3 max-w-2xl">
+      <p class="eyebrow">Upcoming retreats</p>
+      <h1 class="font-light">Find the weekend that <em class="text-gold-600">finds you.</em></h1>
+      <p class="text-ink-soft text-lg leading-relaxed">
+        Small cohorts, private estates, the full programme. Search by date or place — or scroll the map.
+      </p>
+    </div>
+
+    <div class="sticky top-20 z-30 -mx-6 lg:-mx-10 px-6 lg:px-10 py-4 bg-cream/80 backdrop-blur-sm border-b border-sand/60">
+      <div class="flex items-center gap-4 max-w-(--container-page) mx-auto">
+        <div class="flex-1">
+          <SearchBar suggestions={suggestions} />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-20 space-y-8">
+    <!-- View toggle + result count -->
+    <div class="flex items-center justify-between gap-4">
+      <p class="text-sm text-ink-soft" data-result-count>
+        {items.length} {items.length === 1 ? 'retreat' : 'retreats'}
+      </p>
+      <div class="inline-flex rounded-(--radius-pill) border border-sand p-1 bg-cream-deep" role="tablist" aria-label="View">
+        <button
+          type="button"
+          data-view-toggle="list"
+          class="px-4 py-2 rounded-(--radius-pill) text-xs uppercase tracking-[0.18em] bg-ink text-cream"
+          aria-pressed="true"
+        >List</button>
+        <button
+          type="button"
+          data-view-toggle="map"
+          class="px-4 py-2 rounded-(--radius-pill) text-xs uppercase tracking-[0.18em] text-ink-soft hover:text-ink"
+          aria-pressed="false"
+        >Map</button>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <div data-view="list" class="space-y-8">
+      <div data-retreat-grid class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((it) => (
+          <RetreatCard
+            slug={it.retreat.slug}
+            name={it.retreat.name}
+            tagline={it.retreat.tagline}
+            locationName={it.location.name}
+            region={it.location.region}
+            startsAt={it.retreat.starts_at}
+            endsAt={it.retreat.ends_at}
+            leadPricePence={it.lead_price_pence}
+            roomsRemaining={it.rooms_remaining}
+            isSoldOut={it.is_sold_out}
+            searchTokens={fmtToken(it)}
+            startISO={toDateInputValue(it.retreat.starts_at)}
+            endISO={toDateInputValue(it.retreat.ends_at)}
+            lat={it.location.lat}
+            lng={it.location.lng}
+          />
+        ))}
+      </div>
+
+      <!-- Empty state (hidden by default; shown when the filter zeroes results) -->
+      <div data-empty-state hidden class="rounded-(--radius-card) border border-sand/70 bg-cream-deep/40 p-8 lg:p-12 text-center space-y-6">
+        <div class="space-y-2 max-w-xl mx-auto">
+          <p class="eyebrow">Nothing matching</p>
+          <h2 class="text-3xl">Nothing matching just yet — <em class="text-gold-600">join the waitlist</em> below to hear when new dates open.</h2>
+          <p class="text-ink-soft">Tell us where and when, and we'll be in touch the moment something opens up.</p>
+        </div>
+        <div class="max-w-xl mx-auto text-left">
+          <WaitlistForm variant="card" title="Tell us when to call" copy="Drop your email — we'll let you know first when the next dates land." />
+        </div>
+      </div>
+    </div>
+
+    <!-- Map view -->
+    <div data-view="map" hidden>
+      <RetreatsMap />
+    </div>
+  </section>
+
+  <script>
+    // ============================================================
+    //  Listing page — client-side filter + view toggle.
+    //  No framework runtime; everything is a tiny vanilla module.
+    // ============================================================
+
+    const grid = document.querySelector<HTMLElement>('[data-retreat-grid]');
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-retreat-card]'));
+    const empty = document.querySelector<HTMLElement>('[data-empty-state]');
+    const counter = document.querySelector<HTMLElement>('[data-result-count]');
+
+    type Filter = { location: string; from: string; to: string; guests: string };
+
+    function applyFilter(f: Filter) {
+      const q = f.location.trim().toLowerCase();
+      const fromTs = f.from ? Date.parse(f.from + 'T00:00:00Z') : null;
+      const toTs = f.to ? Date.parse(f.to + 'T23:59:59Z') : null;
+
+      let visible = 0;
+      cards.forEach((card) => {
+        let show = true;
+
+        // Location match.
+        if (q) {
+          const tokens = (card.dataset.search ?? '').toLowerCase();
+          if (!tokens.includes(q)) show = false;
+        }
+
+        // Date overlap: [retreat-start, retreat-end] ∩ [from, to] ≠ ∅
+        if (show && (fromTs || toTs)) {
+          const startISO = card.dataset.start ?? '';
+          const endISO = card.dataset.end ?? '';
+          const startTs = startISO ? Date.parse(startISO + 'T00:00:00Z') : null;
+          const endTs = endISO ? Date.parse(endISO + 'T23:59:59Z') : null;
+          if (startTs && endTs) {
+            if (fromTs && endTs < fromTs) show = false;
+            if (toTs && startTs > toTs) show = false;
+          }
+        }
+
+        // Guests filter — v1 is a pass-through; both pair + solo always supported,
+        // so we don't actually exclude anything. Hook is here for future use.
+        // (Brief said "1 or 2"; both occupancies are available on every retreat.)
+
+        card.dataset.filtered = show ? 'false' : 'true';
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      if (counter) {
+        counter.textContent = `${visible} ${visible === 1 ? 'retreat' : 'retreats'}`;
+      }
+      if (empty) empty.hidden = visible !== 0;
+      if (grid) grid.hidden = visible === 0;
+
+      document.dispatchEvent(new CustomEvent('kamala:filtered', { detail: { visible } }));
+    }
+
+    document.addEventListener('kamala:search', (ev) => {
+      const detail = (ev as CustomEvent).detail as Filter;
+      applyFilter(detail);
+    });
+
+    // --- View toggle ------------------------------------------------------
+    const listView = document.querySelector<HTMLElement>('[data-view="list"]');
+    const mapView = document.querySelector<HTMLElement>('[data-view="map"]');
+    const listBtn = document.querySelector<HTMLButtonElement>('[data-view-toggle="list"]');
+    const mapBtn = document.querySelector<HTMLButtonElement>('[data-view-toggle="map"]');
+
+    function setView(v: 'list' | 'map') {
+      if (!listView || !mapView || !listBtn || !mapBtn) return;
+      const isList = v === 'list';
+      listView.hidden = !isList;
+      mapView.hidden = isList;
+      listBtn.setAttribute('aria-pressed', String(isList));
+      mapBtn.setAttribute('aria-pressed', String(!isList));
+      listBtn.classList.toggle('bg-ink', isList);
+      listBtn.classList.toggle('text-cream', isList);
+      listBtn.classList.toggle('text-ink-soft', !isList);
+      mapBtn.classList.toggle('bg-ink', !isList);
+      mapBtn.classList.toggle('text-cream', !isList);
+      mapBtn.classList.toggle('text-ink-soft', isList);
+      document.dispatchEvent(new CustomEvent('kamala:view-changed', { detail: { view: v } }));
+    }
+    listBtn?.addEventListener('click', () => setView('list'));
+    mapBtn?.addEventListener('click', () => setView('map'));
+  </script>
+</BaseLayout>

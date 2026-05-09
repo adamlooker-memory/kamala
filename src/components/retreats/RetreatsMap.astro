@@ -1,0 +1,127 @@
+---
+/**
+ * MapLibre GL JS map of the UK with markers for each retreat.
+ * - Lazy-imported client-side (saves bundle weight on initial paint).
+ * - Tile source: OpenStreetMap raster tiles via the public CDN.
+ *   Attribution rendered per OSM policy.
+ *
+ * Markers read from the same `data-retreat-card` islands the list view uses,
+ * so the data is single-sourced.
+ */
+---
+
+<div class="relative w-full h-[560px] rounded-(--radius-card) overflow-hidden border border-sand/70 bg-cream-deep">
+  <div data-retreats-map class="absolute inset-0"></div>
+  <div class="absolute top-4 left-4 z-10 px-3 py-2 rounded-(--radius-card) bg-cream/90 text-xs text-ink-soft">
+    Click a marker to see the retreat
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" />
+
+<script>
+  // Load the map once the user has scrolled the map view into view —
+  // we still render the container in both views, but only init the map
+  // when it has non-zero size (i.e. map view is active).
+  const container = document.querySelector<HTMLElement>('[data-retreats-map]');
+  let mapInstance: any = null;
+  let markers: Array<{ slug: string; marker: any }> = [];
+
+  async function initMap() {
+    if (mapInstance || !container) return;
+    if (container.clientWidth === 0 || container.clientHeight === 0) return;
+
+    const maplibregl: any = (await import('maplibre-gl')).default;
+    mapInstance = new maplibregl.Map({
+      container,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: 'raster',
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          },
+        },
+        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+      },
+      center: [-2.5, 54.0],
+      zoom: 5,
+      attributionControl: { compact: true },
+    });
+
+    mapInstance.on('load', () => placeMarkers(maplibregl));
+  }
+
+  function placeMarkers(maplibregl: any) {
+    if (!mapInstance) return;
+    // Clear existing markers if re-running.
+    markers.forEach((m) => m.marker.remove());
+    markers = [];
+
+    const cards = document.querySelectorAll<HTMLElement>('[data-retreat-card]');
+    const bounds = new maplibregl.LngLatBounds();
+
+    cards.forEach((card) => {
+      // Skip cards filtered out by the search.
+      if (card.dataset.filtered === 'true') return;
+      const lat = parseFloat(card.dataset.lat ?? '');
+      const lng = parseFloat(card.dataset.lng ?? '');
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+        return;
+      }
+      const slug = card.dataset.slug ?? '';
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'kamala-marker';
+      el.setAttribute('aria-label', `Show ${slug}`);
+      el.style.cssText =
+        'width:28px;height:28px;border-radius:9999px;background:#b78f38;border:2px solid #f9f3f1;box-shadow:0 1px 4px rgba(42,38,34,0.3);cursor:pointer';
+      el.addEventListener('click', () => {
+        document.querySelectorAll('[data-retreat-card]').forEach((c) => {
+          c.classList.remove('ring-2', 'ring-gold-500');
+        });
+        card.classList.add('ring-2', 'ring-gold-500');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([lng, lat])
+        .addTo(mapInstance);
+      markers.push({ slug, marker });
+      bounds.extend([lng, lat]);
+    });
+
+    if (!bounds.isEmpty()) {
+      mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 8, duration: 0 });
+    }
+  }
+
+  // Trigger init when the map view becomes visible.
+  document.addEventListener('kamala:view-changed', (ev: Event) => {
+    const detail = (ev as CustomEvent).detail as { view: 'list' | 'map' };
+    if (detail.view === 'map') {
+      requestAnimationFrame(() => {
+        initMap();
+        if (mapInstance) {
+          mapInstance.resize();
+          // Re-place markers because filters may have changed.
+          import('maplibre-gl').then((m) => placeMarkers((m as any).default));
+        }
+      });
+    }
+  });
+
+  // Re-place markers when search filter changes.
+  document.addEventListener('kamala:filtered', () => {
+    if (!mapInstance) return;
+    import('maplibre-gl').then((m) => placeMarkers((m as any).default));
+  });
+</script>
+
+<style>
+  :global(.maplibregl-canvas) {
+    outline: none;
+  }
+</style>
