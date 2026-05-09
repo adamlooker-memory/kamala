@@ -30,19 +30,19 @@ NOTIFICATIONS_EMAIL = "adam@trustedmarketing.co.uk"
 #   npx wrangler r2  bucket create kamala-media
 # ============================================================
 #
-# [[d1_databases]]
-# binding        = "DB"
-# database_name  = "kamala"
-# database_id    = ""
-# migrations_dir = "drizzle"
+[[d1_databases]]
+binding = "DB"
+database_name = "kamala"
+database_id = "90a559ae-e5cb-4bc8-b32c-ab29413166a3"
+migrations_dir = "drizzle"
 #
-# [[kv_namespaces]]
-# binding = "SESSION"
-# id      = ""
+[[kv_namespaces]]
+binding = "SESSION"
+id = "d80edc696af14d98b464ddc26953083f"
 #
-# [[kv_namespaces]]
-# binding = "RATE_LIMIT"
-# id      = ""
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "62f815f9128146798ac81c8311f21553"
 #
 # [[r2_buckets]]
 # binding     = "MEDIA"
